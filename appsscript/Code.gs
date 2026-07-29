@@ -1,5 +1,5 @@
 /**
- * Tin's Family Cookbook — Google Apps Script backend (v3)
+ * Tin's Family Cookbook — Google Apps Script backend (v4)
  *
  * Serves the cookbook web app and stores everyone's edits in a JSON file
  * ("tins-cookbook-data.json") in the Drive of the account that deploys it.
@@ -10,10 +10,22 @@
  *    (schema.org JSON-LD), then fills the Chinese with Google Translate.
  *  - The 'index' HTML file here is only a small LOADER (see getApp below).
  *
+ * v4 adds data safety (the family's recipes are now live data):
+ *  - readData_() REFUSES to continue if the data file is empty/unreadable,
+ *    instead of silently returning blank data (which the next save would
+ *    have written over the top of — wiping everyone's recipes).
+ *  - Automatic dated backups in Drive (at most one per 6h of activity,
+ *    newest 20 kept): tins-cookbook-backup-YYYYMMDD-HHmm.json
+ *  - backupNow(), listBackups(), restoreBackup(name), dataStats() can be run
+ *    by hand from the Apps Script editor at any time.
+ *
  * Nothing to configure. No keys, no billing, no region restrictions.
  */
 
 var FILE_NAME = 'tins-cookbook-data.json';
+var BACKUP_PREFIX = 'tins-cookbook-backup-';
+var BACKUP_KEEP = 20;                        // how many dated backups to keep
+var BACKUP_EVERY_MS = 6 * 60 * 60 * 1000;    // at most one auto-backup per 6 hours
 
 /**
  * The 'index' HTML file in this project is only a tiny LOADER.
@@ -63,20 +75,119 @@ function getFile_() {
   return DriveApp.createFile(FILE_NAME, JSON.stringify({ overrides: {}, custom: [] }), 'application/json');
 }
 
+/**
+ * Reads the shared data. If the file is unreadable this THROWS on purpose:
+ * returning blank data here would let the next save overwrite every recipe
+ * the family has added. Better a visible error than silent data loss.
+ */
 function readData_() {
-  try {
-    var d = JSON.parse(getFile_().getBlob().getDataAsString());
-    if (!d || typeof d !== 'object') d = {};
-    if (!d.overrides) d.overrides = {};
-    if (!d.custom) d.custom = [];
-    return d;
-  } catch (e) {
-    return { overrides: {}, custom: [] };
+  var raw = getFile_().getBlob().getDataAsString();
+  if (!raw || !raw.replace(/\s/g, '')) {
+    throw new Error('The cookbook data file is empty. Nothing was changed — restore a backup with restoreBackup().');
   }
+  var d;
+  try {
+    d = JSON.parse(raw);
+  } catch (e) {
+    throw new Error('The cookbook data file could not be read. Nothing was changed — restore a backup with restoreBackup().');
+  }
+  if (!d || typeof d !== 'object' || Array.isArray(d)) {
+    throw new Error('The cookbook data file has an unexpected shape. Nothing was changed — restore a backup with restoreBackup().');
+  }
+  if (!d.overrides) d.overrides = {};
+  if (!d.custom) d.custom = [];
+  return d;
 }
 
 function writeData_(d) {
   getFile_().setContent(JSON.stringify(d));
+}
+
+/* ---------- backups ---------- */
+
+function tstamp_() {
+  return Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyyMMdd-HHmm');
+}
+
+/** Saves a dated copy of the current data in Drive. Returns the file name. */
+function backupNow(tag) {
+  var raw = getFile_().getBlob().getDataAsString();
+  if (!raw || raw.length < 2) return null;
+  var name = BACKUP_PREFIX + tstamp_() + (tag ? '-' + tag : '') + '.json';
+  DriveApp.createFile(name, raw, 'application/json');
+  pruneBackups_();
+  Logger.log('Backup written: ' + name + ' (' + raw.length + ' characters)');
+  return name;
+}
+
+function backupFiles_() {
+  var out = [];
+  var it = DriveApp.searchFiles('title contains "' + BACKUP_PREFIX + '" and trashed = false');
+  while (it.hasNext()) {
+    var f = it.next();
+    out.push({ file: f, name: f.getName(), when: f.getDateCreated() });
+  }
+  out.sort(function (a, b) { return b.when - a.when; });
+  return out;
+}
+
+/** Keeps only the newest BACKUP_KEEP backups; older ones go to the Drive bin. */
+function pruneBackups_() {
+  try {
+    var all = backupFiles_();
+    for (var i = BACKUP_KEEP; i < all.length; i++) all[i].file.setTrashed(true);
+  } catch (e) {}
+}
+
+/** Backs up at most once per BACKUP_EVERY_MS, called before every change. */
+function maybeBackup_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var last = Number(props.getProperty('lastBackupMs') || 0);
+    var now = new Date().getTime();
+    if (now - last < BACKUP_EVERY_MS) return;
+    if (backupNow('auto')) props.setProperty('lastBackupMs', String(now));
+  } catch (e) {}
+}
+
+/** Run from the editor: lists the backups, newest first. */
+function listBackups() {
+  var all = backupFiles_();
+  if (!all.length) { Logger.log('No backups yet. Run backupNow() to make one.'); return []; }
+  var names = all.map(function (b) { return b.name + '  (' + b.when + ')'; });
+  Logger.log('Backups, newest first:\n' + names.join('\n'));
+  return names;
+}
+
+/**
+ * Run from the editor to put a backup back in place, e.g.
+ *   restoreBackup('tins-cookbook-backup-20260729-1830-auto.json')
+ * The data being replaced is itself backed up first, so this is reversible.
+ */
+function restoreBackup(name) {
+  if (!name) throw new Error('Pass the backup file name, e.g. restoreBackup("' + BACKUP_PREFIX + '20260729-1830-auto.json")');
+  var it = DriveApp.getFilesByName(name);
+  if (!it.hasNext()) throw new Error('No backup called ' + name + '. Run listBackups() to see the names.');
+  var raw = it.next().getBlob().getDataAsString();
+  JSON.parse(raw); // refuse to restore something unreadable
+  backupNow('before-restore');
+  getFile_().setContent(raw);
+  Logger.log('Restored ' + name);
+  return true;
+}
+
+/** Run from the editor to see what is currently stored. */
+function dataStats() {
+  var raw = getFile_().getBlob().getDataAsString();
+  var d = JSON.parse(raw);
+  var edited = 0, hidden = 0;
+  for (var k in d.overrides) { if (d.overrides[k] === 'deleted') hidden++; else edited++; }
+  var msg = 'Cookbook data: ' + (d.custom || []).length + ' dishes added by the family, ' +
+            edited + ' built-in dishes edited, ' + hidden + ' hidden, ' +
+            raw.length + ' characters total.';
+  Logger.log(msg);
+  Logger.log('Added dishes: ' + (d.custom || []).map(function (r) { return r.en || r.cn; }).join(' | '));
+  return msg;
 }
 
 /* ---------- translation ---------- */
@@ -114,6 +225,7 @@ function saveRecipe(obj) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    maybeBackup_();
     obj = autoTranslate_(obj);
     var d = readData_();
     if (obj.id && isCustomId_(obj.id)) {
@@ -140,6 +252,7 @@ function deleteRecipe(id) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    maybeBackup_();
     var d = readData_();
     if (isCustomId_(id)) {
       d.custom = d.custom.filter(function (x) { return x.id !== id; });
@@ -158,6 +271,7 @@ function resetRecipe(id) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    maybeBackup_();
     var d = readData_();
     delete d.overrides[id];
     writeData_(d);
