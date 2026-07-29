@@ -1,32 +1,44 @@
 # 🍳 Tin's Family Cookbook
 
-A bilingual (English / 繁體中文) family recipe web app — *Made with love for our home kitchen*.
+A bilingual (English-first / 繁體中文) family recipe web app — *Made with love for our home kitchen*.
+Redesigned in Claude Design (CoHee palette · Newsreader + Noto Serif TC), served as a Google Apps Script web app.
 
-## What's inside
+## Layout
 
-| File | Purpose |
-|---|---|
-| `Family Cookbook.html` | The complete cookbook app in one file. Works opened directly in any browser (edits then save only on that device). |
-| `WebApp/index.html` | The same app, used as the web page of the shared family version. |
-| `WebApp/Code.gs` | Google Apps Script backend — stores everyone's edits in the owner's Google Drive (`tins-cookbook-data.json`) and auto-translates English edits to Chinese. |
-| `WebApp/Setup Guide - Tins Family Cookbook.html` | Step-by-step instructions to deploy the shared version at script.google.com (one-time, ~5 minutes). |
+```
+tins-family-cookbook/
+├─ README.md
+├─ DEPLOY.md               how to deploy (GitHub + Apps Script)
+├─ src/
+│  ├─ index.html           the app — one file, recipes inlined; this is what Apps Script serves
+│  └─ recipes.js           the 43 built-in recipes (source of the inlined data)
+├─ appsscript/
+│  ├─ Code.gs              backend: Drive storage, auto-translate, server-side link import
+│  └─ appsscript.json      manifest
+├─ design/
+│  ├─ Tin's Family Cookbook.dc.html   design prototype (spec — do not ship)
+│  └─ README.md                       the design brief / tokens / screens
+└─ WebApp/                 v1 app (archived)
+```
 
-## Features
+## Features (v2)
 
-- 43 built-in family recipes with YouTube video links, bilingual ingredients & steps
-- Category tabs (Breakfast / Lunch / Soup / Appetizer / Main / Dessert) + cuisine filter (中式 / 西式 / 泰式 / 日式 / 韓式 / 越式) + search
-- Edit any dish, add new dishes with photos (photos are compressed automatically)
-- Tap any ingredient to see its name in large type (to show a market stall keeper) and open a photo search
-- English-first editing — empty Chinese fields are translated automatically on save
-- Mobile-optimised; family members can "Add to Home Screen" for an app-like experience
+- Home grid with search (names + ingredients) and a course sheet; favourites (Saved tab)
+- Recipe view → step-by-step **cook mode** (progress bar, keeps screen awake, stamps *last cooked*)
+- **Shopping list** with tick-off, and a **market card**: tap any ingredient to show its Chinese name
+  full-screen to a stall keeper, with a photo-search link
+- Add / edit dishes; **"Fill in from this link"** — paste a recipe URL or YouTube link and the backend
+  (`extractRecipe` in `Code.gs`, Claude Haiku via the Anthropic API) fills everything in, both languages
+- Per-device settings: text size (Small→Largest), Show Chinese, keep-awake
+- Auto-translation on save: blank Chinese fields are filled in server-side
+- Shared storage: everyone's edits live in `tins-cookbook-data.json` in the deployer's Google Drive
 
-## Shared family version
+`src/index.html` also runs standalone (opened as a file): recipes then save only on that device and
+link-import is disabled — handy for testing.
 
-Deploy `WebApp/Code.gs` + `WebApp/index.html` as a Google Apps Script web app
-(Execute as **Me**, access **Anyone**) — full instructions in the Setup Guide.
-Everyone who has the link can view and edit the same cookbook; no login needed.
+## Deploying
 
-## Updating
-
-Edit `WebApp/index.html`, then in Apps Script paste the new version and
-**Deploy → Manage deployments → ✎ → New version**. The family link never changes.
+See **DEPLOY.md**. Short version: paste `appsscript/Code.gs` and `src/index.html` (as an HTML file
+named `index`) into script.google.com, deploy as a web app (Execute as **Me**, access **Anyone**),
+and add `ANTHROPIC_API_KEY` in Script Properties to enable link-import. Re-deploy "New version"
+after updates — the family link never changes.
