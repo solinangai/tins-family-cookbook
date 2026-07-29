@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Noto+Serif+TC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;height:100%;background:#EFE6CF;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+a{color:#8A5A33;text-decoration:none}a:hover{opacity:.75}
+input,button,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:0;height:0}
+@keyframes rise{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+</style>
+</helmet>
+
+<div style="height:100dvh;display:flex;justify-content:center;background:#EFE6CF">
+<div style="width:100%;max-width:440px;height:100%;position:relative;overflow:hidden;background:#FAF2DD;font-family:'Newsreader','Noto Serif TC',serif;color:#4A4A46;display:flex;flex-direction:column;font-size:{{ base }}px">
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;min-height:0">
+  <div style="padding:1.1em 1.25em .7em;display:flex;justify-content:space-between;align-items:flex-end;gap:.75em">
+    <div style="min-width:0">
+      <div style="font-size:.66em;letter-spacing:.18em;text-transform:uppercase;color:#8A5A33;font-weight:700;font-family:'Instrument Sans',sans-serif">{{ dayLabel }} · {{ greeting }}</div>
+      <div style="font-size:1.42em;letter-spacing:-.02em;margin-top:.4em;line-height:1.1;white-space:nowrap">Tin's Family Cookbook</div>
+      <div style="font-size:.86em;font-style:italic;color:#87806F;margin-top:.35em">Made with love for our home kitchen</div>
+    </div>
+    <div onClick="{{ goSettings }}" style="width:2.4em;height:2.4em;border-radius:50%;background:#F7C948;color:#4A4A46;display:flex;align-items:center;justify-content:center;font-size:1em;font-family:'Noto Serif TC',serif;flex:none;cursor:pointer">媽</div>
+  </div>
+
+  <div style="padding:0 1.25em 1em;display:flex;gap:.6em">
+    <div style="flex:1;display:flex;align-items:center;gap:.6em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:1.7em;padding:.72em 1.1em;min-width:0">
+      <span style="width:.85em;height:.85em;border:2px solid #A0947E;border-radius:50%;flex:none"></span>
+      <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:1em;font-family:'Newsreader','Noto Serif TC',serif">
+    </div>
+    <div onClick="{{ openSheet }}" style="flex:none;display:flex;align-items:center;gap:.5em;background:#F7C948;color:#4A4A46;border-radius:1.7em;padding:.72em 1.1em;font-size:1em;cursor:pointer;white-space:nowrap" style-hover="background:#EFBB2C">{{ catLabel }} <span style="font-size:.6em">▼</span></div>
+  </div>
+
+  <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em;-webkit-overflow-scrolling:touch">
+    <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.7em;position:sticky;top:0;background:#FAF2DD;padding-bottom:.3em">
+      <span style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif">{{ resultLabel }}</span>
+      <span style="flex:1;height:1px;background:#EADFC2"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:{{ gridCols }};gap:.85em">
+      <sc-for list="{{ list }}" as="r" hint-placeholder-count="6">
+        <div onClick="{{ r.open }}" style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;overflow:hidden;cursor:pointer;display:flex;flex-direction:column" style-hover="border-color:#F7C948">
+          <div style="position:relative;flex:none">
+            <div style="width:100%;height:6.5em;background-color:#F0E6CF;background-image:{{ r.bg }};background-size:cover;background-position:center"></div>
+            <span onClick="{{ r.fav }}" style="position:absolute;top:.45em;right:.45em;width:1.7em;height:1.7em;border-radius:50%;background:rgba(255,255,255,.93);display:flex;align-items:center;justify-content:center;font-size:.85em;color:{{ r.favColor }}">♥</span>
+          </div>
+          <div style="padding:.62em .75em .78em">
+            <div style="font-size:1.05em;line-height:1.2">{{ r.en }}</div>
+            <sc-if value="{{ showCn }}" hint-placeholder-val="{{ true }}"><div style="font-size:.87em;color:#7A6A52;font-family:'Noto Serif TC',serif;margin-top:.12em">{{ r.cn }}</div></sc-if>
+            <div style="font-size:.74em;color:#87806F;margin-top:.38em;font-family:'Instrument Sans',sans-serif">{{ r.meta }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+      <div style="text-align:center;padding:2.5em 1em;color:#87806F;font-size:1.05em">Nothing here yet.<br>Try another course, or tap <span style="color:#8A5A33">+</span> to add a dish.</div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRecipe }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+  <div style="position:relative">
+    <div style="width:100%;height:13.5em;background-color:#F0E6CF;background-image:{{ rec.bg }};background-size:cover;background-position:center"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:5em;background:linear-gradient(rgba(0,0,0,.45),transparent);pointer-events:none"></div>
+    <div onClick="{{ goHome }}" style="position:absolute;top:.75em;left:.75em;display:flex;align-items:center;gap:.35em;height:2.8em;padding:0 1em 0 .8em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;font-size:.92em;font-family:'Instrument Sans',sans-serif;font-weight:600;cursor:pointer">‹ Back</div>
+    <div style="position:absolute;top:.75em;right:.75em;display:flex;gap:.5em">
+      <span onClick="{{ toggleFav }}" style="width:2.8em;height:2.8em;border-radius:50%;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:{{ rec.favColor }};display:flex;align-items:center;justify-content:center;font-size:1em;cursor:pointer">♥</span>
+      <span onClick="{{ editThis }}" style="height:2.8em;padding:0 1em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;display:flex;align-items:center;justify-content:center;font-size:.92em;font-family:'Instrument Sans',sans-serif;font-weight:600;cursor:pointer">Edit</span>
+    </div>
+  </div>
+  <div style="padding:1em 1.25em 2em">
+    <div style="font-size:1.6em;line-height:1.15;letter-spacing:-.02em">{{ rec.en }}</div>
+    <sc-if value="{{ showCn }}" hint-placeholder-val="{{ true }}"><div style="font-size:1.12em;color:#7A6A52;font-family:'Noto Serif TC',serif;margin-top:.15em">{{ rec.cn }}</div></sc-if>
+    <div style="display:flex;gap:.45em;margin-top:.75em;flex-wrap:wrap;font-family:'Instrument Sans',sans-serif">
+      <span style="padding:.42em .8em;background:#F5E9CC;border-radius:.5em;font-size:.78em;font-weight:600;color:#6E6357">{{ rec.time }}</span>
+      <span style="padding:.42em .8em;background:#F5E9CC;border-radius:.5em;font-size:.78em;font-weight:600;color:#6E6357">Serves {{ rec.serves }}</span>
+      <span style="padding:.42em .8em;background:#F5E9CC;border-radius:.5em;font-size:.78em;font-weight:600;color:#6E6357">{{ rec.lastCooked }}</span>
+    </div>
+    <div style="display:flex;gap:.6em;margin-top:.85em;font-family:'Instrument Sans',sans-serif">
+      <div onClick="{{ startCook }}" style="flex:1;background:#F7C948;color:#4A4A46;border-radius:.85em;padding:.95em;text-align:center;font-size:1em;font-weight:700;cursor:pointer" style-hover="background:#EFBB2C">Start cooking</div>
+      <a href="{{ rec.ytUrl }}" target="_blank" rel="noopener" style="flex:none;padding:0 1em;background:#FFFBEE;border:1.5px solid #EADFC2;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;color:#6E6357">▶ Video</a>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:.5em;margin:1.4em 0 .7em;font-family:'Instrument Sans',sans-serif">
+      <span style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33">Ingredients</span>
+      <span style="flex:1;height:1px;background:#EADFC2"></span>
+      <span onClick="{{ addAllToList }}" style="font-size:.75em;font-weight:700;color:#6B7A45;cursor:pointer">+ Add all</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.55em">
+      <sc-for list="{{ rec.ing }}" as="i" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:.7em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.7em .85em">
+          <span style="font-size:1.15em">{{ i.emoji }}</span>
+          <div onClick="{{ i.show }}" style="flex:1;cursor:pointer;min-width:0">
+            <div style="font-size:1em;line-height:1.25">{{ i.en }}</div>
+            <sc-if value="{{ showCn }}" hint-placeholder-val="{{ true }}"><div style="font-size:.88em;color:#7A6A52;font-family:'Noto Serif TC',serif">{{ i.cn }}</div></sc-if>
+          </div>
+          <span onClick="{{ i.add }}" style="font-size:.66em;color:{{ i.addColor }};font-weight:700;border:1.5px solid #EADFC2;border-radius:.5em;padding:.45em .6em;font-family:'Instrument Sans',sans-serif;cursor:pointer;white-space:nowrap">{{ i.addLabel }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:.5em;margin:1.4em 0 .7em;font-family:'Instrument Sans',sans-serif">
+      <span style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33">Method</span>
+      <span style="flex:1;height:1px;background:#EADFC2"></span>
+    </div>
+    <div style="display:flex;flex-direction:column">
+      <sc-for list="{{ rec.steps }}" as="s" hint-placeholder-count="4">
+        <div style="display:flex;gap:.8em;padding:.8em 0;border-top:1px solid #EADFC2">
+          <span style="font-size:.78em;font-family:'Instrument Sans',sans-serif;font-weight:700;color:#8A5A33;padding-top:.25em">{{ s.n }}</span>
+          <div style="min-width:0">
+            <div style="font-size:1.02em;line-height:1.45;text-wrap:pretty">{{ s.en }}</div>
+            <sc-if value="{{ showCn }}" hint-placeholder-val="{{ true }}"><div style="font-size:.9em;line-height:1.5;color:#7A6A52;font-family:'Noto Serif TC',serif;margin-top:.15em">{{ s.cn }}</div></sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ rec.hasTip }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:1.2em;border-left:2px solid #8A5A33;padding:.2em 0 .2em .9em;font-style:italic;color:#6E6357;font-size:.98em;line-height:1.5">{{ rec.tip }}</div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;min-height:0">
+  <div style="padding:1.1em 1.25em .8em">
+    <div style="font-size:1.72em;line-height:1.1">Shopping list</div>
+    <div style="font-size:.9em;color:#7A6A52;margin-top:.15em;font-family:'Noto Serif TC',serif">買餸清單 · {{ shopCount }}</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em">
+    <div style="display:flex;flex-direction:column;gap:.55em">
+      <sc-for list="{{ shopping }}" as="s" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:.75em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.75em .85em">
+          <span onClick="{{ s.toggle }}" style="width:1.5em;height:1.5em;border-radius:.4em;border:2px solid {{ s.boxColor }};background:{{ s.boxFill }};color:#FFFBEE;display:flex;align-items:center;justify-content:center;font-size:.8em;flex:none;cursor:pointer">{{ s.tick }}</span>
+          <div onClick="{{ s.show }}" style="flex:1;min-width:0;cursor:pointer;opacity:{{ s.opacity }}">
+            <div style="font-size:1em;line-height:1.25">{{ s.en }}</div>
+            <div style="font-size:.88em;color:#7A6A52;font-family:'Noto Serif TC',serif">{{ s.cn }}</div>
+          </div>
+          <span onClick="{{ s.remove }}" style="color:#B0A28C;font-size:1.1em;padding:0 .3em;cursor:pointer">×</span>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ shopEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="text-align:center;padding:3em 1em;color:#87806F;font-size:1.05em;line-height:1.5">Nothing on the list.<br>Open a recipe and tap <span style="color:#6B7A45">+ Add all</span>.</div>
+    </sc-if>
+    <sc-if value="{{ shopHasItems }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ clearBought }}" style="margin-top:1.2em;text-align:center;font-family:'Instrument Sans',sans-serif;font-size:.85em;font-weight:600;color:#8A5A33;cursor:pointer;padding:.8em">Clear bought items</div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;overflow-y:auto">
+  <div style="padding:1.1em 1.25em 2em">
+    <div style="font-size:1.72em;line-height:1.1">Reading comfort</div>
+    <div style="font-size:.95em;color:#7A6A52;margin-top:.2em">Only changes this phone. 只影響這部手機。</div>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.5em 0 .7em">Text size</div>
+    <div style="display:flex;gap:.5em">
+      <sc-for list="{{ sizes }}" as="z" hint-placeholder-count="4">
+        <div onClick="{{ z.pick }}" style="flex:1;border:{{ z.border }};background:#FFFBEE;border-radius:.75em;padding:.85em 0;text-align:center;cursor:pointer">
+          <div style="font-size:{{ z.sample }};color:{{ z.color }};line-height:1">Aa</div>
+          <div style="font-size:.68em;color:{{ z.color }};margin-top:.5em;font-family:'Instrument Sans',sans-serif;font-weight:600">{{ z.name }}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.5em 0 .7em">Chinese 中文</div>
+    <div onClick="{{ toggleCn }}" style="display:flex;justify-content:space-between;align-items:center;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.85em 1em;cursor:pointer;gap:1em">
+      <div><div style="font-size:1.02em">Show Chinese</div><div style="font-size:.85em;color:#7A6A52">Under the English, smaller</div></div>
+      <div style="width:3em;height:1.75em;border-radius:1em;background:{{ cnTrack }};position:relative;flex:none;transition:background .2s"><span style="position:absolute;top:.18em;left:{{ cnKnob }};width:1.4em;height:1.4em;border-radius:50%;background:#FFFBEE;transition:left .2s"></span></div>
+    </div>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.5em 0 .7em">While cooking</div>
+    <div onClick="{{ toggleWake }}" style="display:flex;justify-content:space-between;align-items:center;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.85em 1em;cursor:pointer;gap:1em">
+      <div><div style="font-size:1.02em">Keep screen awake</div><div style="font-size:.85em;color:#7A6A52">Never sleeps in cook mode</div></div>
+      <div style="width:3em;height:1.75em;border-radius:1em;background:{{ wakeTrack }};position:relative;flex:none;transition:background .2s"><span style="position:absolute;top:.18em;left:{{ wakeKnob }};width:1.4em;height:1.4em;border-radius:50%;background:#FFFBEE;transition:left .2s"></span></div>
+    </div>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.5em 0 .7em">Preview</div>
+    <div style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;display:flex;gap:.85em;align-items:center;padding:.7em">
+      <img src="https://i.ytimg.com/vi/dUq64G_HRyI/hqdefault.jpg" alt="" style="width:4.6em;height:4.6em;object-fit:cover;border-radius:.6em;flex:none">
+      <div style="min-width:0"><div style="font-size:1.3em;line-height:1.2">Clear Broth Beef Brisket</div><sc-if value="{{ showCn }}" hint-placeholder-val="{{ true }}"><div style="font-size:1em;color:#7A6A52;font-family:'Noto Serif TC',serif;margin-top:.1em">清湯牛腩</div></sc-if></div>
+    </div>
+    <div style="margin-top:1.6em;text-align:center;font-size:.9em;color:#A0947E;font-style:italic">Made with love for our home kitchen</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;min-height:0">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:.75em;padding:1em 1.25em .8em;border-bottom:1px solid #EADFC2;flex:none">
+    <span onClick="{{ cancelEdit }}" style="font-size:.92em;font-family:'Instrument Sans',sans-serif;font-weight:600;color:#87806F;cursor:pointer;padding:.3em .2em">Cancel</span>
+    <span style="font-size:1.05em">{{ editTitle }}</span>
+    <span onClick="{{ saveDraft }}" style="font-size:.92em;font-family:'Instrument Sans',sans-serif;font-weight:700;color:#8A5A33;cursor:pointer;padding:.3em .2em">Save</span>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:1.1em 1.25em 2.5em">
+
+    <label style="display:block;position:relative;border-radius:1em;overflow:hidden;border:1.5px dashed #DCCFAF;background-color:#FFFBEE;background-image:{{ draft.bg }};background-size:cover;background-position:center;height:9em;cursor:pointer">
+      <input type="file" accept="image/*" onChange="{{ pickPhoto }}" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+      <div style="position:absolute;inset:auto 0 0 0;padding:.6em;text-align:center;background:rgba(74,74,70,.72);color:#FFFBEE;font-size:.82em;font-family:'Instrument Sans',sans-serif;font-weight:600">{{ photoLabel }}</div>
+    </label>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.4em 0 .6em">Start from a link</div>
+    <div style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:.85em;padding:.85em">
+      <div style="font-size:.92em;color:#6E6357;line-height:1.45">Paste a recipe page or YouTube link — we'll fill in the ingredients and steps for you, in both languages.</div>
+      <input value="{{ draft.source }}" onChange="{{ setSource }}" placeholder="https://…" style="width:100%;background:#FAF2DD;border:1px solid #EADFC2;border-radius:.6em;padding:.7em .8em;font-size:.95em;outline:none;margin-top:.6em;font-family:'Instrument Sans',sans-serif">
+      <div onClick="{{ runImport }}" style="margin-top:.55em;background:{{ importBtnBg }};color:{{ importBtnFg }};border:1px solid #8A5A33;border-radius:.6em;padding:.75em;text-align:center;font-size:.92em;font-weight:700;font-family:'Instrument Sans',sans-serif;cursor:pointer">{{ importLabel }}</div>
+      <sc-if value="{{ importNote }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:.55em;font-size:.85em;color:{{ importNoteColor }};line-height:1.4;font-family:'Instrument Sans',sans-serif">{{ importNote }}</div>
+      </sc-if>
+    </div>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.4em 0 .6em">The dish</div>
+    <input value="{{ draft.en }}" onChange="{{ setEn }}" placeholder="Name in English" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1.05em;outline:none;font-family:'Newsreader','Noto Serif TC',serif">
+    <input value="{{ draft.cn }}" onChange="{{ setCn }}" placeholder="中文名（留空會自動翻譯）" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:.95em;outline:none;margin-top:.5em;color:#7A6A52;font-family:'Noto Serif TC',serif">
+
+    <div style="display:flex;flex-wrap:wrap;gap:.45em;margin-top:.7em">
+      <sc-for list="{{ draftCats }}" as="c" hint-placeholder-count="6">
+        <span onClick="{{ c.pick }}" style="padding:.5em .95em;border-radius:1.3em;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.border }};font-size:.95em;cursor:pointer">{{ c.en }}</span>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;gap:.5em;margin-top:.7em">
+      <input value="{{ draft.time }}" onChange="{{ setTime }}" placeholder="30 min" style="flex:1;min-width:0;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1em;outline:none;font-family:'Newsreader',serif">
+      <input value="{{ draft.serves }}" onChange="{{ setServes }}" placeholder="Serves 4" style="flex:1;min-width:0;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1em;outline:none;font-family:'Newsreader',serif">
+    </div>
+    <div style="display:flex;gap:.5em;margin-top:.5em">
+      <input value="{{ draft.addedBy }}" onChange="{{ setAddedBy }}" placeholder="Added by" style="flex:1;min-width:0;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1em;outline:none;font-family:'Newsreader',serif">
+      <input value="{{ draft.ytid }}" onChange="{{ setYt }}" placeholder="YouTube link" style="flex:1;min-width:0;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1em;outline:none;font-family:'Newsreader',serif">
+    </div>
+
+    <div style="display:flex;align-items:baseline;gap:.5em;margin:1.5em 0 .6em;font-family:'Instrument Sans',sans-serif">
+      <span style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33">Ingredients</span>
+      <span style="flex:1;height:1px;background:#EADFC2"></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.5em">
+      <sc-for list="{{ draftIng }}" as="i" hint-placeholder-count="3">
+        <div style="display:flex;gap:.45em;align-items:flex-start">
+          <input value="{{ i.emoji }}" onChange="{{ i.setEmoji }}" style="width:2.6em;flex:none;text-align:center;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.75em 0;font-size:1em;outline:none">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.35em">
+            <input value="{{ i.en }}" onChange="{{ i.setEn }}" placeholder="Ingredient &amp; amount" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.7em .85em;font-size:1em;outline:none;font-family:'Newsreader',serif">
+            <input value="{{ i.cn }}" onChange="{{ i.setCn }}" placeholder="中文" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.6em .85em;font-size:.9em;outline:none;color:#7A6A52;font-family:'Noto Serif TC',serif">
+          </div>
+          <span onClick="{{ i.remove }}" style="flex:none;color:#B0A28C;font-size:1.2em;padding:.5em .25em;cursor:pointer">×</span>
+        </div>
+      </sc-for>
+    </div>
+    <div onClick="{{ addIng }}" style="margin-top:.6em;text-align:center;border:1px dashed #DCCFAF;border-radius:.7em;padding:.7em;font-size:.9em;font-family:'Instrument Sans',sans-serif;font-weight:600;color:#8A5A33;cursor:pointer">+ Add ingredient</div>
+
+    <div style="display:flex;align-items:baseline;gap:.5em;margin:1.5em 0 .6em;font-family:'Instrument Sans',sans-serif">
+      <span style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33">Method</span>
+      <span style="flex:1;height:1px;background:#EADFC2"></span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.6em">
+      <sc-for list="{{ draftSteps }}" as="s" hint-placeholder-count="3">
+        <div style="display:flex;gap:.55em;align-items:flex-start">
+          <span style="flex:none;font-size:.8em;font-family:'Instrument Sans',sans-serif;font-weight:700;color:#8A5A33;padding-top:.9em">{{ s.n }}</span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.35em">
+            <textarea value="{{ s.en }}" onChange="{{ s.setEn }}" rows="2" placeholder="What to do" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.7em .85em;font-size:1em;outline:none;resize:none;font-family:'Newsreader',serif;line-height:1.4"></textarea>
+            <textarea value="{{ s.cn }}" onChange="{{ s.setCn }}" rows="2" placeholder="中文步驟" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.6em .85em;font-size:.9em;outline:none;resize:none;color:#7A6A52;font-family:'Noto Serif TC',serif;line-height:1.5"></textarea>
+          </div>
+          <span onClick="{{ s.remove }}" style="flex:none;color:#B0A28C;font-size:1.2em;padding:.5em .25em;cursor:pointer">×</span>
+        </div>
+      </sc-for>
+    </div>
+    <div onClick="{{ addStep }}" style="margin-top:.6em;text-align:center;border:1px dashed #DCCFAF;border-radius:.7em;padding:.7em;font-size:.9em;font-family:'Instrument Sans',sans-serif;font-weight:600;color:#8A5A33;cursor:pointer">+ Add step</div>
+
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif;margin:1.5em 0 .6em">Family note</div>
+    <textarea value="{{ draft.tip }}" onChange="{{ setTip }}" rows="3" placeholder="The little thing that makes it ours…" style="width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1em;outline:none;resize:none;font-style:italic;font-family:'Newsreader','Noto Serif TC',serif;line-height:1.5"></textarea>
+
+    <div onClick="{{ saveDraft }}" style="margin-top:1.4em;background:#F7C948;color:#4A4A46;border-radius:.85em;padding:1em;text-align:center;font-size:1.05em;font-weight:700;font-family:'Instrument Sans',sans-serif;cursor:pointer" style-hover="background:#EFBB2C">{{ saveLabel }}</div>
+    <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ deleteDish }}" style="margin-top:.7em;text-align:center;font-size:.88em;font-family:'Instrument Sans',sans-serif;font-weight:600;color:#A0947E;cursor:pointer;padding:.7em">Delete this dish</div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showTabs }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;justify-content:space-around;align-items:center;padding:.6em .5em 1.4em;background:#FFFBEE;border-top:1px solid #EADFC2;font-family:'Instrument Sans',sans-serif;flex:none">
+  <div onClick="{{ goHome }}" style="display:flex;flex-direction:column;align-items:center;gap:.25em;color:{{ tabHome }};cursor:pointer;min-width:3.4em" style-hover="color:#8A5A33"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:.35em"></span><span style="font-size:.68em;font-weight:600">Cook</span></div>
+  <div onClick="{{ goFavs }}" style="display:flex;flex-direction:column;align-items:center;gap:.25em;color:{{ tabFav }};cursor:pointer;min-width:3.4em" style-hover="color:#8A5A33"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:50%"></span><span style="font-size:.68em;font-weight:600">Saved</span></div>
+  <div onClick="{{ goAdd }}" style="width:3.1em;height:3.1em;border-radius:50%;background:#F7C948;color:#4A4A46;display:flex;align-items:center;justify-content:center;font-size:1.6em;font-weight:300;margin-top:-1.3em;box-shadow:0 6px 16px rgba(247,201,72,.55);cursor:pointer" style-hover="background:#EFBB2C">+</div>
+  <div onClick="{{ goList }}" style="display:flex;flex-direction:column;align-items:center;gap:.25em;color:{{ tabList }};cursor:pointer;min-width:3.4em;position:relative" style-hover="color:#8A5A33"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:.25em"></span><span style="font-size:.68em;font-weight:600">Shopping</span><span style="position:absolute;top:-.3em;right:.45em;background:#F7C948;color:#4A4A46;font-size:.6em;font-weight:700;border-radius:1em;padding:.1em .45em;display:{{ badgeShow }}">{{ shopCount }}</span></div>
+  <div onClick="{{ goSettings }}" style="display:flex;flex-direction:column;align-items:center;gap:.25em;color:{{ tabSet }};cursor:pointer;min-width:3.4em" style-hover="color:#8A5A33"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:50%"></span><span style="font-size:.68em;font-weight:600">Family</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(45,42,38,.45);z-index:20;display:flex;flex-direction:column;justify-content:flex-end;animation:fade .16s ease-out">
+  <div style="background:#FAF2DD;border-radius:1.4em 1.4em 0 0;padding:.9em 1.35em 1.6em;max-height:88%;overflow-y:auto;animation:rise .22s cubic-bezier(.2,.8,.3,1)">
+    <div style="width:2.8em;height:.3em;border-radius:.2em;background:#E2D6BA;margin:0 auto 1em"></div>
+    <div style="font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif">Course</div>
+    <sc-for list="{{ cats }}" as="c" hint-placeholder-count="7">
+      <div onClick="{{ c.pick }}" style="display:flex;justify-content:space-between;align-items:center;padding:.85em 0;border-bottom:1px solid #EADFC2;cursor:pointer">
+        <span style="font-size:1.12em;color:{{ c.color }}">{{ c.en }} <span style="font-size:.82em;color:{{ c.cnColor }};font-family:'Noto Serif TC',serif">{{ c.cn }}</span></span>
+        <span style="font-size:.9em;color:{{ c.color }}">{{ c.right }}</span>
+      </div>
+    </sc-for>
+    <div onClick="{{ closeSheet }}" style="background:#F7C948;color:#4A4A46;border-radius:.85em;padding:.95em;text-align:center;font-size:1.02em;font-weight:700;margin-top:1.2em;font-family:'Instrument Sans',sans-serif;cursor:pointer" style-hover="background:#EFBB2C">{{ sheetCta }}</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ marketOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeMarket }}" style="position:absolute;inset:0;background:#4A4A46;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5em;text-align:center;animation:fade .16s ease-out;cursor:pointer">
+  <div style="font-size:.72em;letter-spacing:.18em;text-transform:uppercase;color:#F7C948;font-family:'Instrument Sans',sans-serif;font-weight:700">Show this to the stall</div>
+  <div style="font-size:3.1em;line-height:1.15;color:#FFFBEE;font-family:'Noto Serif TC',serif;margin-top:.5em;text-wrap:balance">{{ market.cn }}</div>
+  <div style="font-size:1.25em;color:#B0A28C;margin-top:.6em;text-wrap:pretty">{{ market.en }}</div>
+  <a href="{{ market.searchUrl }}" target="_blank" rel="noopener" style="margin-top:2em;border:1.5px solid #6E6E66;color:#FAF2DD;border-radius:.85em;padding:.8em 1.4em;font-size:.9em;font-family:'Instrument Sans',sans-serif;font-weight:600">See photos of this</a>
+  <div style="margin-top:1.6em;font-size:.85em;color:#77706385;color:#A9A69B;font-family:'Instrument Sans',sans-serif">Tap anywhere to close</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCook }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#35352F;color:#FFFBEE;z-index:25;display:flex;flex-direction:column;font-family:'Newsreader','Noto Serif TC',serif">
+  <div style="display:flex;align-items:center;gap:.7em;padding:1.2em 1.25em .9em">
+    <span onClick="{{ endCook }}" style="font-size:.8em;font-weight:700;color:#A9A69B;font-family:'Instrument Sans',sans-serif;cursor:pointer;padding:.3em .5em .3em 0">✕ Exit</span>
+    <div style="flex:1;display:flex;gap:.3em">
+      <sc-for list="{{ cookBars }}" as="b" hint-placeholder-count="5">
+        <span style="flex:1;height:.35em;background:{{ b.color }};border-radius:.2em"></span>
+      </sc-for>
+    </div>
+    <span style="font-size:.85em;font-weight:700;font-family:'Instrument Sans',sans-serif">{{ cookCounter }}</span>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:.5em 1.5em 0;display:flex;flex-direction:column">
+    <div style="font-size:.8em;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#F7C948;font-family:'Instrument Sans',sans-serif">{{ rec.en }}</div>
+    <div style="font-size:1.75em;font-weight:500;line-height:1.3;margin-top:.7em;text-wrap:pretty">{{ cookStepEn }}</div>
+    <sc-if value="{{ showCn }}" hint-placeholder-val="{{ true }}"><div style="font-size:1.3em;line-height:1.55;color:#C9C6BB;margin-top:.7em;font-family:'Noto Serif TC',serif">{{ cookStepCn }}</div></sc-if>
+  </div>
+  <div style="display:flex;gap:.6em;padding:1em 1.25em 1.6em">
+    <div onClick="{{ prevStep }}" style="flex:none;width:4.4em;border:2px solid #63635B;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:1.4em;cursor:pointer">‹</div>
+    <div onClick="{{ nextStep }}" style="flex:1;background:#F7C948;color:#4A4A46;border-radius:.85em;padding:1.15em;text-align:center;font-size:1.1em;font-weight:700;font-family:'Instrument Sans',sans-serif;cursor:pointer" style-hover="background:#EFBB2C">{{ nextLabel }}</div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:50%;bottom:6.5em;transform:translateX(-50%);background:#4A4A46;color:#FAF2DD;padding:.7em 1.2em;border-radius:1.5em;font-size:.88em;font-family:'Instrument Sans',sans-serif;z-index:40;white-space:nowrap;animation:fade .15s ease-out">{{ toast }}</div>
+</sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:860}}">
+const CATS = [
+  {key:'all', en:'All dishes', cn:'全部'},
+  {key:'breakfast', en:'Breakfast', cn:'早餐'},
+  {key:'lunch', en:'Lunch', cn:'午餐'},
+  {key:'soup', en:'Soup', cn:'湯水'},
+  {key:'appetizer', en:'Appetiser', cn:'前菜'},
+  {key:'main', en:'Main', cn:'主菜'},
+  {key:'dessert', en:'Sweet', cn:'糖水'},
+];
+const SIZES = [
+  {key:'s', name:'Small', base:14, sample:'.85em'},
+  {key:'m', name:'Medium', base:16, sample:'1.05em'},
+  {key:'l', name:'Large', base:18.5, sample:'1.35em'},
+  {key:'xl', name:'Largest', base:21, sample:'1.7em'},
+];
+const PERSIST = ['favs','shopping','size','showCn','wake','customs','overrides'];
+const KEY = 'tinsCookbook.prefs.v1';
+const blankDraft = ()=>({en:'',cn:'',cat:'main',time:'',serves:'',ytid:'',img:'',addedBy:'',tip:'',source:'',ing:[['🧺','',''],['🧺','','']],steps:[['',''],['','']]});
+const ytId = (u)=>{ const m = String(u||'').match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : ''; };
+
+class Component extends DCLogic {
+  state = {
+    recipes: [], view:'home', cat:'all', query:'', recipeId:null, step:0,
+    sheet:false, market:null, toast:'', favs:[], shopping:[],
+    size:'m', showCn:true, wake:true,
+    customs:[], overrides:{}, sig:'clay', draft:null, editingId:null,
+    importing:false, importNote:'', importErr:false,
+  };
+  _base = [];
+
+  componentDidMount(){
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+      const patch = {};
+      PERSIST.forEach(k=>{ if(saved[k]!==undefined) patch[k]=saved[k]; });
+      if(Object.keys(patch).length) this.setState(patch);
+    } catch(e){}
+    import('./recipes.js').then(m=>{
+      this._base = m.RECIPES.map((r,i)=>Object.assign({}, r, {id:r.id||('r'+i)}));
+      this.setState({recipes: this.merge()});
+    });
+  }
+
+  merge(customs, overrides){
+    const cs = customs || this.state.customs || [];
+    const ov = overrides || this.state.overrides || {};
+    return this._base
+      .filter(r=>ov[r.id] !== 'deleted')
+      .map(r=> ov[r.id] ? Object.assign({}, r, ov[r.id]) : r)
+      .concat(cs);
+  }
+
+  save(patch){
+    this.setState(patch, ()=>{
+      const s = this.state;
+      const out = {};
+      PERSIST.forEach(k=>{ out[k] = s[k]; });
+      try { localStorage.setItem(KEY, JSON.stringify(out)); } catch(e){}
+    });
+  }
+
+  openAdd(){
+    this.setState({view:'edit', editingId:null, draft:blankDraft(), importNote:'', importErr:false, importing:false});
+  }
+  openEdit(r){
+    this.setState({view:'edit', editingId:r.id, importNote:'', importErr:false, importing:false, draft:{
+      source: r.ytid ? 'https://www.youtube.com/watch?v='+r.ytid : '',
+      en:r.en||'', cn:r.cn||'', cat:r.cat||'main', time:r.time||'', serves:r.serves||'',
+      ytid:r.ytid||'', img:r.img||'', addedBy:r.addedBy||'', tip:r.tip||'',
+      ing:(r.ing||[]).map(i=>[i[0],i[1],i[2]]).concat([['🧺','','']]),
+      steps:(r.steps||[]).map(s=>[s[0],s[1]]).concat([['','']]),
+    }});
+  }
+  setDraft(patch){ this.setState({draft: Object.assign({}, this.state.draft, patch)}); }
+
+  commitDraft(){
+    const d = this.state.draft; if(!d) return;
+    if(!d.en.trim() && !d.cn.trim()){ this.flash('Give the dish a name first'); return; }
+    const clean = {
+      en: d.en.trim() || d.cn.trim(), cn: d.cn.trim(), cat: d.cat,
+      time: d.time.trim(), serves: d.serves.trim(), ytid: d.ytid.trim(),
+      addedBy: d.addedBy.trim(), tip: d.tip.trim(),
+      img: d.img || (d.ytid.trim() ? 'https://i.ytimg.com/vi/'+d.ytid.trim()+'/hqdefault.jpg' : ''),
+      ing: d.ing.filter(i=>i[1].trim()||i[2].trim()).map(i=>[i[0]||'🧺', i[1].trim(), i[2].trim()]),
+      steps: d.steps.filter(s=>s[0].trim()||s[1].trim()).map(s=>[s[0].trim(), s[1].trim()]),
+      updated: new Date().toISOString().slice(0,10),
+    };
+    const id = this.state.editingId;
+    let customs = this.state.customs.slice();
+    let overrides = Object.assign({}, this.state.overrides);
+    let newId = id;
+    if(!id){
+      newId = 'c' + Date.now();
+      customs.push(Object.assign({id:newId}, clean));
+    } else if(customs.some(c=>c.id===id)){
+      customs = customs.map(c=> c.id===id ? Object.assign({id:id}, clean) : c);
+    } else {
+      overrides[id] = clean;
+    }
+    this._pendingRecipes = this.merge(customs, overrides);
+    this.save({customs, overrides, recipes:this._pendingRecipes, view:'recipe', recipeId:newId, draft:null, editingId:null});
+    this.flash(id ? 'Saved' : 'Added to the cookbook');
+  }
+
+  deleteDish(){
+    const id = this.state.editingId; if(!id) return;
+    let customs = this.state.customs.filter(c=>c.id!==id);
+    let overrides = Object.assign({}, this.state.overrides);
+    if(!this.state.customs.some(c=>c.id===id)) overrides[id] = 'deleted';
+    this.save({customs, overrides, recipes:this.merge(customs, overrides), view:'home', recipeId:null, draft:null, editingId:null});
+    this.flash('Removed');
+  }
+
+  flash(msg){
+    clearTimeout(this._t);
+    this.setState({toast:msg});
+    this._t = setTimeout(()=>this.setState({toast:''}), 1700);
+  }
+
+  cur(){ return this.state.recipes.find(r=>r.id===this.state.recipeId) || null; }
+
+  filtered(){
+    const {recipes, cat, query, favs} = this.state;
+    const q = query.trim().toLowerCase();
+    return recipes.filter(r=>{
+      if(cat==='fav'){ if(!favs.includes(r.id)) return false; }
+      else if(cat!=='all' && r.cat!==cat) return false;
+      if(!q) return true;
+      const hay = [r.en, r.cn].concat((r.ing||[]).map(i=>i[1]+' '+i[2])).join(' ').toLowerCase();
+      return hay.indexOf(q) >= 0;
+    });
+  }
+
+  renderVals(){
+    const st = this.state;
+    const size = SIZES.find(z=>z.key===st.size) || SIZES[1];
+    const big = size.base >= 18.5;
+    const rec = this.cur();
+    const list = this.filtered();
+    const catObj = CATS.find(c=>c.key===st.cat);
+    const isRecipe = st.view==='recipe' && !!rec;
+    const inList = (name)=> st.shopping.some(s=>s.en===name);
+
+    const v = {
+      base: size.base,
+      dayLabel: new Date().toLocaleDateString('en-GB', {weekday:'long'}),
+      greeting: "What's cooking?",
+      showCn: st.showCn,
+      isHome: st.view==='home',
+      isRecipe,
+      isList: st.view==='list',
+      isSettings: st.view==='settings',
+      isCook: st.view==='cook' && !!rec,
+      isEdit: st.view==='edit' && !!st.draft,
+      showTabs: st.view==='home' || st.view==='list' || st.view==='settings',
+      sheetOpen: st.sheet,
+      marketOpen: !!st.market,
+      toast: st.toast,
+      gridCols: big ? '1fr' : '1fr 1fr',
+      catLabel: st.cat==='fav' ? 'Saved' : (catObj ? catObj.en : 'All'),
+      resultLabel: (st.cat==='fav' ? 'Saved' : (catObj? catObj.en : 'All')) + ' · ' + list.length + (list.length===1?' dish':' dishes'),
+      empty: st.recipes.length>0 && list.length===0,
+      query: st.query,
+      onQuery: (e)=>this.setState({query:e.target.value}),
+      openSheet: ()=>this.setState({sheet:true}),
+      closeSheet: ()=>this.setState({sheet:false}),
+      closeMarket: ()=>this.setState({market:null}),
+      goHome: ()=>this.setState({view:'home'}),
+      goList: ()=>this.setState({view:'list'}),
+      goSettings: ()=>this.setState({view:'settings'}),
+      goFavs: ()=>this.setState({view:'home', cat:'fav', query:''}),
+      goAdd: ()=>this.openAdd(),
+      tabHome: st.view==='home' && st.cat!=='fav' ? '#8A5A33' : '#A0947E',
+      tabFav: st.view==='home' && st.cat==='fav' ? '#8A5A33' : '#A0947E',
+      tabList: st.view==='list' ? '#8A5A33' : '#A0947E',
+      tabSet: st.view==='settings' ? '#8A5A33' : '#A0947E',
+      shopCount: st.shopping.length,
+      badgeShow: st.shopping.length ? 'block' : 'none',
+      shopEmpty: st.shopping.length===0,
+      shopHasItems: st.shopping.some(s=>s.done),
+      sheetCta: 'Show ' + list.length + (list.length===1?' dish':' dishes'),
+    };
+
+    v.list = list.map(r=>({
+      id:r.id, en:r.en, cn:r.cn, bg: r.img ? 'url("'+r.img+'")' : 'none',
+      meta: r.time + (r.serves? ' · serves '+r.serves : ''),
+      favColor: st.favs.includes(r.id) ? '#E5734F' : '#DCCFAF',
+      open: ()=>this.setState({view:'recipe', recipeId:r.id, step:0}),
+      fav: (e)=>{ e.stopPropagation(); this.toggleFavId(r.id); },
+    }));
+
+    v.cats = CATS.map(c=>{
+      const n = c.key==='all' ? st.recipes.length : st.recipes.filter(r=>r.cat===c.key).length;
+      const on = st.cat===c.key;
+      return {
+        en:c.en, cn:c.cn, right: on ? '✓' : String(n),
+        color: on ? '#8A5A33' : '#4A4A46',
+        cnColor: on ? '#8A5A33' : '#7A6A52',
+        pick: ()=>this.setState({cat:c.key, sheet:false}),
+      };
+    });
+
+    v.sizes = SIZES.map(z=>({
+      name:z.name, sample:z.sample,
+      border: st.size===z.key ? '2px solid #8A5A33' : '1px solid #EADFC2',
+      color: st.size===z.key ? '#8A5A33' : '#7A6A52',
+      pick: ()=>this.save({size:z.key}),
+    }));
+
+    v.toggleCn = ()=>this.save({showCn: !st.showCn});
+    v.cnTrack = st.showCn ? '#F7C948' : '#E4DAC2';
+    v.cnKnob = st.showCn ? 'calc(100% - 1.58em)' : '.18em';
+    v.toggleWake = ()=>this.save({wake: !st.wake});
+    v.wakeTrack = st.wake ? '#F7C948' : '#E4DAC2';
+    v.wakeKnob = st.wake ? 'calc(100% - 1.58em)' : '.18em';
+
+    v.shopping = st.shopping.map((s,i)=>({
+      en:s.en, cn:s.cn,
+      tick: s.done ? '✓' : '',
+      boxColor: s.done ? '#6B7A45' : '#DCCFAF',
+      boxFill: s.done ? '#6B7A45' : 'transparent',
+      opacity: s.done ? .45 : 1,
+      toggle: ()=>{ const n = st.shopping.slice(); n[i] = Object.assign({}, n[i], {done:!n[i].done}); this.save({shopping:n}); },
+      remove: ()=>{ const n = st.shopping.slice(); n.splice(i,1); this.save({shopping:n}); },
+      show: ()=>this.setState({market:{en:s.en, cn:s.cn}}),
+    }));
+    v.clearBought = ()=>this.save({shopping: st.shopping.filter(s=>!s.done)});
+
+    if(rec){
+      v.rec = {
+        en:rec.en, cn:rec.cn, bg: rec.img ? 'url("'+rec.img+'")' : 'none', time:rec.time, serves:rec.serves,
+        tip: rec.tip || '', hasTip: !!rec.tip,
+        lastCooked: 'Family recipe',
+        ytUrl: rec.ytid ? 'https://www.youtube.com/watch?v='+rec.ytid : '#',
+        favColor: st.favs.includes(rec.id) ? '#E5734F' : '#FFFBEE',
+        ing: (rec.ing||[]).map(i=>({
+          emoji:i[0], en:i[1], cn:i[2],
+          addLabel: inList(i[1]) ? 'ON LIST' : '+ LIST',
+          addColor: inList(i[1]) ? '#6B7A45' : '#8A5A33',
+          show: ()=>this.setState({market:{en:i[1], cn:i[2]}}),
+          add: (e)=>{ e.stopPropagation(); this.addOne(i); },
+        })),
+        steps: (rec.steps||[]).map((s,i)=>({n: String(i+1).padStart(2,'0'), en:s[0], cn:s[1]})),
+      };
+      v.toggleFav = ()=>this.toggleFavId(rec.id);
+      v.editThis = ()=>this.openEdit(rec);
+      v.startCook = ()=>{ this.setState({view:'cook', step:0}); this.acquireWake(); };
+      v.endCook = ()=>{ this.setState({view:'recipe'}); this.releaseWake(); };
+      const steps = rec.steps || [];
+      const idx = Math.min(st.step, Math.max(0, steps.length-1));
+      v.cookBars = steps.map((s,i)=>({color: i<=idx ? '#F7C948' : '#5C5C55'}));
+      v.cookCounter = (idx+1) + '/' + steps.length;
+      v.cookStepEn = steps[idx] ? steps[idx][0] : '';
+      v.cookStepCn = steps[idx] ? steps[idx][1] : '';
+      v.nextLabel = idx >= steps.length-1 ? 'Done — 好味！' : 'Next step';
+      v.prevStep = ()=>this.setState({step: Math.max(0, idx-1)});
+      v.nextStep = ()=>{
+        if(idx >= steps.length-1){ this.setState({view:'recipe'}); this.releaseWake(); this.flash('Marked as cooked today'); }
+        else this.setState({step: idx+1});
+      };
+      v.addAllToList = ()=>{
+        const add = (rec.ing||[]).filter(i=>!inList(i[1])).map(i=>({en:i[1], cn:i[2], done:false}));
+        if(!add.length){ this.flash('Already on the list'); return; }
+        this.save({shopping: st.shopping.concat(add)});
+        this.flash(add.length + ' added to shopping list');
+      };
+    } else {
+      v.rec = {en:'', cn:'', bg:'none', time:'', serves:'', ing:[], steps:[], tip:'', hasTip:false, ytUrl:'#', favColor:'#FFFBEE', lastCooked:''};
+      v.cookBars = []; v.cookCounter=''; v.cookStepEn=''; v.cookStepCn=''; v.nextLabel='Next step';
+      v.prevStep = v.nextStep = v.toggleFav = v.startCook = v.endCook = v.addAllToList = v.editThis = ()=>{};
+    }
+
+    const d = st.draft;
+    v.draft = d ? {
+      en:d.en, cn:d.cn, time:d.time, serves:d.serves, ytid:d.ytid, addedBy:d.addedBy, tip:d.tip,
+      bg: d.img ? 'url("'+d.img+'")' : 'none',
+    } : {en:'',cn:'',time:'',serves:'',ytid:'',addedBy:'',tip:'',bg:'none'};
+    v.draft.source = d ? (d.source||'') : '';
+    v.setSource = e=>this.setDraft({source:e.target.value});
+    v.runImport = ()=>this.runImport();
+    v.importing = !!st.importing;
+    v.importLabel = st.importing ? 'Working…' : 'Fill in from this link';
+    v.importBtnBg = st.importing ? '#F5E9CC' : '#F7C948';
+    v.importBtnFg = st.importing ? '#8A5A33' : '#4A4A46';
+    v.importNote = st.importNote || '';
+    v.importNoteColor = st.importErr ? '#8A5A33' : '#6B7A45';
+    v.editTitle = st.editingId ? 'Edit dish' : 'New dish';
+    v.saveLabel = st.editingId ? 'Save changes' : 'Add to the cookbook';
+    v.canDelete = !!st.editingId;
+    v.photoLabel = d && d.img ? 'Tap to use your own photo instead' : 'Add a photo of the dish';
+    v.cancelEdit = ()=>this.setState({view: st.editingId ? 'recipe' : 'home', draft:null, editingId:null});
+    v.saveDraft = ()=>this.commitDraft();
+    v.deleteDish = ()=>this.deleteDish();
+    v.setEn = e=>this.setDraft({en:e.target.value});
+    v.setCn = e=>this.setDraft({cn:e.target.value});
+    v.setTime = e=>this.setDraft({time:e.target.value});
+    v.setServes = e=>this.setDraft({serves:e.target.value});
+    v.setAddedBy = e=>this.setDraft({addedBy:e.target.value});
+    v.setTip = e=>this.setDraft({tip:e.target.value});
+    v.setYt = e=>{
+      const raw = e.target.value;
+      const m = raw.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
+      this.setDraft({ytid: m ? m[1] : raw.trim()});
+    };
+    v.pickPhoto = e=>{
+      const file = e.target.files && e.target.files[0]; if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        const img = new Image();
+        img.onload = ()=>{
+          const max = 900, sc = Math.min(1, max/Math.max(img.width, img.height));
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(img.width*sc); cv.height = Math.round(img.height*sc);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          this.setDraft({img: cv.toDataURL('image/jpeg', .75)});
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    v.draftCats = CATS.filter(c=>c.key!=='all').map(c=>{
+      const on = d && d.cat===c.key;
+      return {en:c.en, bg: on?'#F7C948':'#FFFBEE', fg: '#4A4A46', border: on?'#F7C948':'#EADFC2', pick: ()=>this.setDraft({cat:c.key})};
+    });
+    v.draftIng = (d ? d.ing : []).map((row,i)=>({
+      emoji:row[0], en:row[1], cn:row[2],
+      setEmoji: e=>this.editRow('ing', i, 0, e.target.value),
+      setEn: e=>this.editRow('ing', i, 1, e.target.value),
+      setCn: e=>this.editRow('ing', i, 2, e.target.value),
+      remove: ()=>this.removeRow('ing', i),
+    }));
+    v.draftSteps = (d ? d.steps : []).map((row,i)=>({
+      n: String(i+1).padStart(2,'0'), en:row[0], cn:row[1],
+      setEn: e=>this.editRow('steps', i, 0, e.target.value),
+      setCn: e=>this.editRow('steps', i, 1, e.target.value),
+      remove: ()=>this.removeRow('steps', i),
+    }));
+    v.addIng = ()=>this.setDraft({ing: d.ing.concat([['🧺','','']])});
+    v.addStep = ()=>this.setDraft({steps: d.steps.concat([['','']])});
+
+    v.market = st.market ? {
+      en: st.market.en, cn: st.market.cn,
+      searchUrl: 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(st.market.cn || st.market.en),
+    } : {en:'', cn:'', searchUrl:'#'};
+
+    return v;
+  }
+
+  async fetchPage(url){
+    const tries = ['https://r.jina.ai/'+url, 'https://api.allorigins.win/raw?url='+encodeURIComponent(url)];
+    const tagRe = new RegExp('<[^>]+>', 'g');
+    const blockRe = (t)=>new RegExp('<'+t+'[\\s\\S]*?</'+t+'>', 'gi');
+    for(const t of tries){
+      try {
+        const res = await fetch(t);
+        if(!res.ok) continue;
+        let raw = await res.text();
+        if(!raw || raw.length < 200) continue;
+        let img = '';
+        const og = raw.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)(?::src)?["'][^>]*content=["']([^"']+)["']/i)
+                || raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["']/i);
+        if(og) img = og[1];
+        if(!img){
+          const md = raw.match(/!\[[^\]]*\]\((https?:\/\/[^\s)]+\.(?:jpe?g|png|webp)[^\s)]*)\)/i);
+          if(md) img = md[1];
+        }
+        if(!img){
+          const tag = raw.match(/<img[^>]+src=["'](https?:\/\/[^"']+\.(?:jpe?g|png|webp)[^"']*)["']/i);
+          if(tag) img = tag[1];
+        }
+        const txt = raw.replace(blockRe('script'),' ').replace(blockRe('style'),' ').replace(tagRe,' ').replace(/\s+/g,' ');
+        return {text: txt.slice(0, 14000), img};
+      } catch(e){}
+    }
+    return {text:'', img:''};
+  }
+
+  async runImport(){
+    const d = this.state.draft; if(!d) return;
+    const url = (d.source||'').trim();
+    if(!url){ this.setState({importNote:'Paste a link first.', importErr:true}); return; }
+    if(this.state.importing) return;
+    const vid = ytId(url);
+    this.setState({importing:true, importErr:false, importNote:'Reading the page…'});
+    try {
+      const got = await this.fetchPage(vid ? 'https://www.youtube.com/watch?v='+vid : url);
+      const page = got.text;
+      const cover = vid ? 'https://i.ytimg.com/vi/'+vid+'/hqdefault.jpg' : got.img;
+      if(cover) this.setDraft({img: cover});
+      if(!page){ this.setState({importing:false, importErr:true, importNote: cover ? "Got the photo, but couldn't read the recipe — some sites block it. Type it in below." : "Couldn't open that link — some sites block it. Try another, or type it in below."}); return; }
+      this.setState({importNote:'Writing it up in English and 中文…'});
+      const out = await window.claude.complete({
+        max_tokens: 4000,
+        system: 'You extract home-cooking recipes and reply with JSON only — no prose, no code fences.',
+        messages: [{role:'user', content:
+          'From the page text below, extract ONE recipe. Reply with this exact JSON shape:\n' +
+          '{"en":"dish name in English","cn":"菜名（繁體中文）","cat":"breakfast|lunch|soup|appetizer|main|dessert",' +
+          '"time":"e.g. 30 min","serves":"e.g. 4","ing":[["emoji","ingredient + amount in English","材料及份量（繁體中文）"]],' +
+          '"steps":[["step in plain English","步驟（繁體中文）"]],"tip":"one short cooking tip, English then 中文"}\n' +
+          'Rules: always fill BOTH languages (translate into Traditional Chinese if the source is English, and vice versa). ' +
+          'One suitable food emoji per ingredient. Keep steps short and practical, one action each. ' +
+          'If it is a video page, use the title and description. If there is no recipe at all, reply {"error":"no recipe"}.\n\n' +
+          'PAGE TEXT:\n' + page
+        }],
+      });
+      const m = String(out).match(/\{[\s\S]*\}/);
+      if(!m) throw new Error('bad reply');
+      const r = JSON.parse(m[0]);
+      if(r.error){ this.setState({importing:false, importErr:true, importNote:'No recipe found on that page.'}); return; }
+      const cats = ['breakfast','lunch','soup','appetizer','main','dessert'];
+      const ing = (r.ing||[]).filter(x=>x && (x[1]||x[2])).map(x=>[x[0]||'🧺', x[1]||'', x[2]||'']);
+      const steps = (r.steps||[]).filter(x=>x && (x[0]||x[1])).map(x=>[x[0]||'', x[1]||'']);
+      this.setState({
+        importing:false, importErr:false,
+        importNote:'Filled in ' + ing.length + ' ingredients and ' + steps.length + ' steps — please check before saving.',
+        draft: Object.assign({}, this.state.draft, {
+          en: r.en || d.en, cn: r.cn || d.cn,
+          cat: cats.indexOf(r.cat) >= 0 ? r.cat : d.cat,
+          time: r.time || d.time, serves: r.serves || d.serves,
+          tip: r.tip || d.tip,
+          ytid: vid || d.ytid,
+          img: this.state.draft.img || cover || d.img || '',
+          ing: ing.length ? ing.concat([['🧺','','']]) : d.ing,
+          steps: steps.length ? steps.concat([['','']]) : d.steps,
+        }),
+      });
+    } catch(e){
+      this.setState({importing:false, importErr:true, importNote:"That didn't work. Try again, or fill it in by hand below."});
+    }
+  }
+
+  editRow(kind, i, j, val){
+    const rows = this.state.draft[kind].map((r,k)=> k===i ? r.map((c,m)=> m===j ? val : c) : r);
+    this.setDraft({[kind]: rows});
+  }
+  removeRow(kind, i){
+    const rows = this.state.draft[kind].slice();
+    rows.splice(i,1);
+    this.setDraft({[kind]: rows.length ? rows : [kind==='ing' ? ['🧺','',''] : ['','']]});
+  }
+
+  addOne(i){
+    if(this.state.shopping.some(s=>s.en===i[1])){ this.flash('Already on the list'); return; }
+    this.save({shopping: this.state.shopping.concat([{en:i[1], cn:i[2], done:false}])});
+    this.flash('Added to shopping list');
+  }
+
+  toggleFavId(id){
+    const f = this.state.favs;
+    this.save({favs: f.includes(id) ? f.filter(x=>x!==id) : f.concat([id])});
+  }
+
+  acquireWake(){
+    if(!this.state.wake || !navigator.wakeLock) return;
+    navigator.wakeLock.request('screen').then(l=>{ this._wl = l; }).catch(()=>{});
+  }
+  releaseWake(){ if(this._wl){ try{ this._wl.release(); }catch(e){} this._wl = null; } }
+  componentWillUnmount(){ clearTimeout(this._t); this.releaseWake(); }
+}
+
+</script>
+</body>
+</html>
