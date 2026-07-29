@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;background:#FAF2DD">
+<div id="ld" style="font-family:Georgia,serif;color:#8A5A33;text-align:center;padding-top:40vh">Loading the cookbook… 載入中…</div>
+<script>
+window.onerror = function(m){ var d = document.getElementById("ld"); if(d){ d.textContent = "Error: " + m; } };
+function boot(html){
+  var doc = new DOMParser().parseFromString(html, "text/html");
+  var js = [];
+  Array.prototype.slice.call(doc.querySelectorAll("script")).forEach(function(n){ js.push(n.textContent); n.parentNode.removeChild(n); });
+  document.title = doc.title;
+  Array.prototype.slice.call(doc.head.querySelectorAll("style,link")).forEach(function(n){ document.head.appendChild(document.importNode(n, true)); });
+  document.body.removeAttribute("style");
+  document.body.innerHTML = doc.body.innerHTML;
+  js.forEach(function(t){ var e = document.createElement("script"); e.textContent = t; document.body.appendChild(e); });
+}
+function fail(){ document.getElementById("ld").textContent = "Could not load the cookbook. Check the connection and refresh. 載入失敗，請重新整理。"; }
+google.script.run.withSuccessHandler(boot).withFailureHandler(fail).getApp();
+</script>
+</body>
+</html>

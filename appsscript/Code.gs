@@ -1,5 +1,5 @@
 /**
- * Tin's Family Cookbook — Google Apps Script backend (v4)
+ * Tin's Family Cookbook — Google Apps Script backend (v5)
  *
  * Serves the cookbook web app and stores everyone's edits in a JSON file
  * ("tins-cookbook-data.json") in the Drive of the account that deploys it.
@@ -19,6 +19,9 @@
  *  - backupNow(), listBackups(), restoreBackup(name), dataStats() can be run
  *    by hand from the Apps Script editor at any time.
  *
+ * v5: doPost() lets the installed app (GitHub Pages) read and write the same
+ *     Drive file, so the data still lives only in this Google account.
+ *
  * Nothing to configure. No keys, no billing, no region restrictions.
  */
 
@@ -37,13 +40,39 @@ var BACKUP_EVERY_MS = 6 * 60 * 60 * 1000;    // at most one auto-backup per 6 ho
  * Bonus: updating src/index.html on GitHub updates the app for everyone
  * with NO redeploy.
  */
-var APP_URL = 'https://raw.githubusercontent.com/solinangai/tins-family-cookbook/main/src/index.html';
+var APP_URL = 'https://raw.githubusercontent.com/solinangai/tins-family-cookbook/main/docs/index.html';
 var APP_CACHE = 'tins-cookbook-app-cache.html';
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle("Tin's Family Cookbook")
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
+/**
+ * Data API for the installed app (served from GitHub Pages).
+ * The page POSTs {action, payload} as text/plain — that content type is
+ * "simple" so the browser sends it straight through without a CORS preflight,
+ * which Apps Script cannot answer. The recipes themselves never leave this
+ * account: they stay in the Drive file above.
+ */
+function doPost(e) {
+  var out = { ok: false, error: 'bad request' };
+  try {
+    var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    var action = body.action;
+    var payload = body.payload;
+    if (action === 'get') out = { ok: true, data: getData() };
+    else if (action === 'save') out = { ok: true, data: saveRecipe(payload) };
+    else if (action === 'delete') out = { ok: true, data: deleteRecipe(payload) };
+    else if (action === 'reset') out = { ok: true, data: resetRecipe(payload) };
+    else if (action === 'extract') out = { ok: true, data: extractRecipe(payload) };
+    else out = { ok: false, error: 'unknown action: ' + action };
+  } catch (err) {
+    out = { ok: false, error: String(err && err.message || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 /** Returns the full app HTML, fetched from GitHub, cached in Drive. */
