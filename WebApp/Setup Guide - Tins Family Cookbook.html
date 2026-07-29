@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setup Guide — Tin's Family Cookbook web app</title>
+<style>
+  body{font-family:"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif; background:#faf6ef; color:#2d2a26; margin:0; padding:24px 16px 60px; line-height:1.6;}
+  .wrap{max-width:720px; margin:0 auto;}
+  h1{color:#b5432e; font-size:1.6rem;}
+  h2{color:#b5432e; font-size:1.15rem; border-bottom:2px solid #c99b3f; display:inline-block; padding-bottom:3px; margin-top:34px;}
+  .step{background:#fff; border:1px solid #e8e0d2; border-radius:12px; padding:14px 18px; margin:14px 0; display:flex; gap:14px;}
+  .num{background:#c99b3f; color:#fff; min-width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; margin-top:2px;}
+  code,.mono{background:#f3ecdd; padding:2px 7px; border-radius:6px; font-family:Consolas,monospace; font-size:.92em;}
+  .note{background:#f6f0e2; border-left:4px solid #c99b3f; padding:10px 14px; border-radius:6px; font-size:.92rem; margin:14px 0;}
+  .warn{background:#fdf0ee; border-left:4px solid #b5432e;}
+  b{color:#8f2f1e;}
+</style>
+</head>
+<body><div class="wrap">
+<h1>🍳 Tin's Family Cookbook — one-time setup (about 5 minutes)</h1>
+<p>This turns the cookbook into a <b>shared family website</b>: everyone opens one link, and every edit or new dish is saved for the whole family in your Google Drive. You only do this once.</p>
+<p>You need the two files that came with this guide: <code>Code.gs</code> and <code>index.html</code>.</p>
+
+<h2>Part 1 — Create the app</h2>
+<div class="step"><div class="num">1</div><div>On your computer, open <b>script.google.com</b> in a browser and sign in with your Google account (solinangai@gmail.com).</div></div>
+<div class="step"><div class="num">2</div><div>Click <b>+ New project</b>. A code editor opens with a file called <code>Code.gs</code>.</div></div>
+<div class="step"><div class="num">3</div><div>Click the name <b>"Untitled project"</b> (top-left) and rename it to <b>Tin's Family Cookbook</b>.</div></div>
+<div class="step"><div class="num">4</div><div>Open the provided <code>Code.gs</code> file in Notepad. Select all (<b>Ctrl+A</b>), copy (<b>Ctrl+C</b>). Back in the browser, click inside the code area, select all, and paste — replacing everything that was there.</div></div>
+<div class="step"><div class="num">5</div><div>In the left sidebar, next to <b>Files</b>, click <b>＋</b> → <b>HTML</b>. Type the name <code>index</code> exactly (lowercase, no ".html") and press Enter.</div></div>
+<div class="step"><div class="num">6</div><div>Open the provided <code>index.html</code> in Notepad, select all, copy, and paste it into the new <code>index.html</code> file in the browser — again replacing everything.</div></div>
+<div class="step"><div class="num">7</div><div>Press <b>Ctrl+S</b> (or the 💾 icon) to save the project.</div></div>
+
+<h2>Part 2 — Publish it</h2>
+<div class="step"><div class="num">8</div><div>Click the blue <b>Deploy</b> button (top-right) → <b>New deployment</b>.</div></div>
+<div class="step"><div class="num">9</div><div>Click the ⚙ gear next to "Select type" and choose <b>Web app</b>. Then set:<br>• Execute as: <b>Me</b><br>• Who has access: <b>Anyone</b><br>Click <b>Deploy</b>.</div></div>
+<div class="step"><div class="num">10</div><div>Google will ask you to authorise: click <b>Authorize access</b>, pick your account. If it says <i>"Google hasn't verified this app"</i>, click <b>Advanced</b> → <b>Go to Tin's Family Cookbook (unsafe)</b> → <b>Allow</b>. This warning is normal — it's your own private app, and the permission only lets it save the recipe file in your own Drive.</div></div>
+<div class="step"><div class="num">11</div><div>Copy the <b>Web app URL</b> (it starts with <span class="mono">https://script.google.com/macros/s/…</span>). <b>That's the family cookbook link!</b> Send it to the family WhatsApp group.</div></div>
+
+<h2>Part 3 — On each phone</h2>
+<div class="step"><div class="num">12</div><div>Open the link in <b>Safari</b> (iPhone) or <b>Chrome</b> (Android) — not inside the WhatsApp preview. Tap <b>Share → Add to Home Screen</b>. It now opens like an app, full screen, with an icon.</div></div>
+
+<h2>Good to know</h2>
+<div class="note">🌐 <b>Auto-translation:</b> when anyone adds or edits a dish, they can type English only — empty Chinese boxes are filled in automatically by Google Translate when saving.</div>
+<div class="note">☁ <b>Where the data lives:</b> everyone's edits are saved to a file called <code>tins-cookbook-data.json</code> in your Google Drive. Deleting that file resets the cookbook to the original recipes.</div>
+<div class="note warn">🔒 <b>Privacy:</b> anyone who has the link can view and edit, without logging in — so share the link only with family.</div>
+<div class="note">🔄 <b>Future updates:</b> if Claude gives you an updated <code>index.html</code> later, paste the new content over the old one, then <b>Deploy → Manage deployments → ✎ (pencil) → Version: New version → Deploy</b>. The family link stays the same.</div>
+</div></body>
+</html>
