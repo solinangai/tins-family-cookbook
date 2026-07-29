@@ -382,6 +382,13 @@ function findRecipeNode_(root) {
   return out;
 }
 
+/**
+ * Collects the cooking steps.
+ * Each entry is { t: "step text", img: "photo for THIS step (may be blank)" }.
+ * Recipe sites that publish HowToStep.image give a real picture per step - that
+ * is where the photos under "Start cooking" come from. When a source has none,
+ * the step simply has no photo and the family can add one from a phone.
+ */
 function collectSteps_(ri, acc, depth) {
   if (!ri || depth > 4) return;
   if (typeof ri === 'string') {
@@ -389,13 +396,14 @@ function collectSteps_(ri, acc, depth) {
     if (!txt) return;
     // A single blob of text: split it into sentences so it becomes real steps.
     if (txt.length > 120 && acc.length === 0) {
-      var marked = txt.replace(/([.。！!？?])\s+/g, '$1');
-      var parts = marked.split('');
+      var SPLIT = String.fromCharCode(1);
+      var parts = txt.replace(/([.\u3002\uFF01!\uFF1F?])\s+/g, '$1' + SPLIT).split(SPLIT);
       var kept = 0;
-      parts.forEach(function (p) { p = p.trim(); if (p.length > 2) { acc.push(p); kept++; } });
-      if (kept) return;
+      parts.forEach(function (p) { p = p.trim(); if (p.length > 2) { acc.push({ t: p, img: '' }); kept++; } });
+      if (kept > 1) return;
+      while (kept-- > 0) acc.pop();   // only one sentence - keep the blob whole
     }
-    acc.push(txt);
+    acc.push({ t: txt, img: '' });
     return;
   }
   if (Array.isArray(ri)) { for (var i = 0; i < ri.length; i++) collectSteps_(ri[i], acc, depth + 1); return; }
@@ -404,8 +412,16 @@ function collectSteps_(ri, acc, depth) {
     if (ty === 'howtosection' && ri.itemListElement) { collectSteps_(ri.itemListElement, acc, depth + 1); return; }
     if (ri.itemListElement) { collectSteps_(ri.itemListElement, acc, depth + 1); return; }
     var s = stripTags_(ri.text || ri.name || '');
-    if (s) acc.push(s);
+    if (s) acc.push({ t: s, img: stepImage_(ri) });
   }
+}
+
+/** Picks a usable photo URL off a HowToStep node. */
+function stepImage_(node) {
+  var u = firstStr_(node.image || node.thumbnailUrl || '');
+  if (!u) return '';
+  u = String(u).trim();
+  return /^https?:\/\//i.test(u) ? u : '';
 }
 
 var CAT_RULES = [
@@ -488,7 +504,9 @@ function parseRecipeHtml_(raw, vid) {
 
   var stepsAcc = [];
   collectSteps_(node.recipeInstructions, stepsAcc, 0);
-  var steps = stepsAcc.filter(function (s) { return s && s.length > 1; }).map(function (s) { return [s, '']; });
+  var steps = stepsAcc
+    .filter(function (s) { return s && s.t && s.t.length > 1; })
+    .map(function (s) { return [s.t, '', s.img || '']; });
 
   var time = isoDur_(node.totalTime) || isoDur_(node.cookTime) || isoDur_(node.prepTime);
   var serves = firstStr_(node.recipeYield).replace(/servings?|serves|人份/gi, '').trim();
