@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tin's Family Cookbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Noto+Serif+TC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;height:100%;background:#EFE6CF;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
+a{color:#8A5A33;text-decoration:none}a:hover{opacity:.75}
+input,button,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:0;height:0}
+@keyframes rise{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+#frame{height:100dvh;display:flex;justify-content:center;background:#EFE6CF}
+#app{width:100%;max-width:440px;height:100%;position:relative;overflow:hidden;background:#FAF2DD;font-family:'Newsreader','Noto Serif TC',serif;color:#4A4A46;display:flex;flex-direction:column}
+.ins{font-family:'Instrument Sans',sans-serif}
+.tc{font-family:'Noto Serif TC',serif}
+.eyebrow{font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif}
+.rule{display:flex;align-items:baseline;gap:.5em;font-family:'Instrument Sans',sans-serif}
+.rule .line{flex:1;height:1px;background:#EADFC2}
+.ybtn{background:#F7C948;color:#4A4A46;cursor:pointer}
+.ybtn:hover{background:#EFBB2C}
+.card{background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;overflow:hidden;cursor:pointer}
+.card:hover{border-color:#F7C948}
+.tabbtn{display:flex;flex-direction:column;align-items:center;gap:.25em;cursor:pointer;min-width:3.4em}
+.tabbtn:hover{color:#8A5A33 !important}
+.chip{padding:.42em .8em;background:#F5E9CC;border-radius:.5em;font-size:.78em;font-weight:600;color:#6E6357;font-family:'Instrument Sans',sans-serif}
+.finput{width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.8em .9em;font-size:1em;outline:none;font-family:'Newsreader',serif}
+.crow{display:flex;justify-content:space-between;align-items:center;padding:.85em 0;border-bottom:1px solid #EADFC2;cursor:pointer}
+.tgl{width:3em;height:1.75em;border-radius:1em;position:relative;flex:none;transition:background .2s}
+.tgl span{position:absolute;top:.18em;width:1.4em;height:1.4em;border-radius:50%;background:#FFFBEE;transition:left .2s}
+.setrow{display:flex;justify-content:space-between;align-items:center;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.85em 1em;cursor:pointer;gap:1em}
+.addrow{margin-top:.6em;text-align:center;border:1px dashed #DCCFAF;border-radius:.7em;padding:.7em;font-size:.9em;font-family:'Instrument Sans',sans-serif;font-weight:600;color:#8A5A33;cursor:pointer}
+textarea.f2{width:100%;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.7em .85em;font-size:1em;outline:none;resize:none;font-family:'Newsreader',serif;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="frame"><div id="app"></div></div>
+<script>
+/* ============ built-in recipes (43) ============ */
+const RECIPES = [{"id":"r0","cat":"main","en":"Shrimp & Scrambled Eggs","cn":"滑蛋蝦仁","img":"https://i.ytimg.com/vi/EECaLvnu2g0/hqdefault.jpg","ytid":"EECaLvnu2g0","time":"15 min","serves":"2-3","ing":[["🦐","Shrimp, peeled & deveined 150g","蝦仁 150克"],["🥚","Eggs 4","雞蛋 4隻"],["🧂","Salt ½ tsp + white pepper","鹽半茶匙、白胡椒粉少許"],["🌽","Cornstarch 1 tsp (for shrimp)","粟粉 1茶匙（醃蝦用）"],["🧅","Spring onion, chopped 1","蔥花 1條"],["🥛","Milk 1 tbsp (optional)","牛奶 1湯匙（可省略）"],["🫒","Oil 2 tbsp","油 2湯匙"]],"steps":[["Pat shrimp dry, marinate with salt, pepper and cornstarch for 10 minutes.","蝦仁抹乾，用鹽、胡椒粉、粟粉醃10分鐘。"],["Beat eggs with salt, milk and half the spring onion.","雞蛋加鹽、牛奶和一半蔥花打勻。"],["Stir-fry shrimp over medium heat until just pink (about 1 minute), remove.","中火炒蝦仁至剛轉粉紅色（約1分鐘），盛起。"],["Add shrimp into the egg mixture. Heat oil in the wok until warm, pour in eggs.","蝦仁加入蛋液。鑊中燒油至微熱，倒入蛋液。"],["Push eggs gently from the edge to the centre over LOW heat. Remove while still slightly runny — they finish cooking on the plate. Top with spring onion.","細火用鑊鏟由邊向中心輕推，蛋未全熟帶少許流動狀便上碟（餘溫會繼續煮熟），撒上蔥花。"]],"tip":"Low heat and stopping early = silky eggs. 全程細火、早少少熄火，蛋才嫩滑。"},{"id":"r1","cat":"main","en":"Steamed Egg with Minced Pork","cn":"肉碎蒸水蛋","img":"https://i.ytimg.com/vi/lHNK_wRVioI/hqdefault.jpg","ytid":"lHNK_wRVioI","time":"20 min","serves":"2-3","ing":[["🥚","Eggs 3","雞蛋 3隻"],["🐖","Minced pork 80g","免治豬肉 80克"],["💧","Warm water 1.5× volume of eggs","溫水（蛋液1.5倍）"],["🧂","Salt ½ tsp","鹽半茶匙"],["🍶","Light soy sauce 2 tsp","生抽 2茶匙"],["🧅","Spring onion, chopped","蔥花少許"],["🫒","Sesame oil few drops","麻油數滴"]],"steps":[["Season minced pork with 1 tsp soy sauce; stir-fry until cooked and set aside.","免治豬肉用1茶匙生抽略醃，炒熟備用。"],["Beat eggs with salt, add warm water (1.5× egg volume), mix and strain through a sieve.","雞蛋加鹽打勻，加入1.5倍溫水，拌勻後過篩。"],["Pour into a shallow dish, cover with cling film or a plate.","倒入淺碟，蓋上保鮮紙或碟。"],["Steam over medium-low heat 10–12 minutes until just set.","中細火蒸10至12分鐘至剛凝固。"],["Top with pork, spring onion, soy sauce and sesame oil.","放上肉碎、蔥花，淋生抽和麻油。"]],"tip":"Strain the egg and keep the steam gentle for a mirror-smooth surface. 蛋液過篩、細火蒸，表面才平滑如鏡。"},{"id":"r2","cat":"breakfast","en":"High-Protein Greek Yogurt Bowl","cn":"高蛋白希臘乳酪碗","img":"https://i.ytimg.com/vi/X1d70605sg4/hqdefault.jpg","ytid":"X1d70605sg4","time":"5 min","serves":"1","ing":[["🥛","Plain Greek yogurt (unsweetened) 200g","無糖希臘乳酪 200克"],["🫐","Blueberries / strawberries ½ cup","藍莓或士多啤梨 半杯"],["🥜","Mixed nuts & seeds 2 tbsp","雜果仁及籽 2湯匙"],["🥣","Chia seeds 1 tsp","奇亞籽 1茶匙"],["🍯","Honey 1 tsp (optional, small amount)","蜜糖 1茶匙（可省略，少量）"],["🥥","Unsweetened coconut flakes / cinnamon","無糖椰絲或肉桂粉少許"]],"steps":[["Spoon yogurt into a bowl.","乳酪放入碗中。"],["Top with berries, nuts, seeds and coconut flakes.","加上莓果、果仁、籽和椰絲。"],["Drizzle a little honey only if needed; serve immediately.","如需要才淋少量蜜糖，即食。"]],"tip":"Unsweetened yogurt + nuts keeps blood sugar steady — avoid flavoured yogurt. 選無糖乳酪，避免調味乳酪，血糖更穩定。"},{"id":"r3","cat":"breakfast","en":"Vegetable & Cheese Omelette","cn":"蔬菜芝士奄列","img":"https://i.ytimg.com/vi/0kFawY0FYcc/hqdefault.jpg","ytid":"0kFawY0FYcc","time":"12 min","serves":"1-2","ing":[["🥚","Eggs 3","雞蛋 3隻"],["🫑","Bell pepper, diced ¼","甜椒粒 ¼個"],["🧅","Onion, diced ¼","洋蔥粒 ¼個"],["🍄","Mushrooms, sliced 3","蘑菇片 3隻"],["🧀","Cheese, shredded 30g","芝士碎 30克"],["🧂","Salt & black pepper","鹽、黑胡椒少許"],["🧈","Butter or oil 1 tbsp","牛油或油 1湯匙"]],"steps":[["Sauté onion, pepper and mushrooms with a pinch of salt until soft; set aside.","洋蔥、甜椒、蘑菇加少許鹽炒軟，盛起。"],["Beat eggs with salt and pepper.","雞蛋加鹽和胡椒打勻。"],["Melt butter over medium-low heat, pour in eggs and stir gently until half set.","中細火下牛油，倒入蛋液輕拌至半熟。"],["Spread vegetables and cheese over one half.","蔬菜和芝士鋪在一邊。"],["Fold over, cook 30 more seconds and slide onto a plate.","對摺，再煎30秒即上碟。"]],"tip":"Take it off the heat while the centre is still soft. 中心仍軟身時離火最嫩滑。"},{"id":"r4","cat":"breakfast","en":"Salmon, Avocado & Poached Egg","cn":"三文魚牛油果水波蛋","img":"https://i.ytimg.com/vi/j9tAAOpLwzo/hqdefault.jpg","ytid":"j9tAAOpLwzo","time":"15 min","serves":"1","ing":[["🐟","Salmon fillet 120g (or smoked salmon 60g)","三文魚柳 120克（或煙三文魚 60克）"],["🥑","Avocado ½, sliced","牛油果 半個切片"],["🥚","Eggs 2","雞蛋 2隻"],["🍞","Wholegrain bread 1 slice (optional)","全麥麵包 1片（可省略）"],["🍋","Lemon juice, salt, black pepper","檸檬汁、鹽、黑胡椒"],["🫒","Olive oil 1 tsp","橄欖油 1茶匙"]],"steps":[["Season salmon; pan-fry 3 minutes each side until just cooked.","三文魚調味，每面煎約3分鐘至剛熟。"],["Poach eggs: simmering water + splash of vinegar, swirl, drop egg in, 3 minutes.","煮水波蛋：水微滾加少許醋，攪出漩渦下蛋，煮3分鐘。"],["Slice avocado, season with lemon juice and salt.","牛油果切片，加檸檬汁和鹽。"],["Plate salmon, avocado and eggs (on toast if using); finish with pepper and olive oil.","三文魚、牛油果、水波蛋上碟（可配多士），灑黑胡椒、橄欖油。"]],"tip":"Protein + good fat, very little starch — ideal for steady morning energy. 高蛋白高好脂肪、低澱粉，早上血糖不會飆升。"},{"id":"r5","cat":"breakfast","en":"Cottage Cheese & Tomato Toast","cn":"茅屋芝士番茄多士","img":"https://i.ytimg.com/vi/-EiOAHbtFlg/hqdefault.jpg","ytid":"-EiOAHbtFlg","time":"8 min","serves":"1","ing":[["🧀","Cottage cheese 150g","茅屋芝士 150克"],["🍞","Wholegrain bread 1-2 slices, toasted","全麥麵包 1至2片（烘香）"],["🍅","Cherry tomatoes 8, halved","車厘茄 8粒（開半）"],["🫒","Olive oil 1 tsp","橄欖油 1茶匙"],["🌿","Basil or spring onion + black pepper, salt","羅勒或蔥花、黑胡椒、鹽"]],"steps":[["Toast the bread until golden.","麵包烘至金黃。"],["Spread cottage cheese thickly on top.","厚厚塗上茅屋芝士。"],["Top with tomatoes (fresh, or pan-blistered 2 minutes for extra sweetness).","放上車厘茄（生食或煎2分鐘更甜）。"],["Season with salt, pepper, olive oil and herbs.","加鹽、黑胡椒、橄欖油、香草。"]],"tip":"Cottage cheese has ~12g protein per 100g with little sugar. 茅屋芝士每100克約12克蛋白質，低糖。"},{"id":"r6","cat":"breakfast","en":"Egg White Veggie Scramble","cn":"蛋白炒蔬菜","img":"https://i.ytimg.com/vi/nqaVK50PCgA/hqdefault.jpg","ytid":"nqaVK50PCgA","time":"10 min","serves":"1","ing":[["🥚","Egg whites 5 (or 1 cup liquid egg white)","蛋白 5隻份"],["🥬","Spinach 1 handful","菠菜 一把"],["🍅","Cherry tomatoes 6, halved","車厘茄 6粒（開半）"],["🧄","Garlic 1 clove, minced","蒜蓉 1瓣"],["🫒","Olive oil 1 tsp + salt + black pepper","橄欖油1茶匙、鹽、黑胡椒"]],"steps":[["Sauté garlic and tomatoes 1 minute; add spinach until wilted.","炒香蒜蓉和番茄1分鐘，下菠菜炒至軟。"],["Pour in egg whites with a pinch of salt.","倒入加了少許鹽的蛋白。"],["Stir gently over low heat until just set and fluffy.","細火輕炒至剛凝固鬆軟。"],["Season with black pepper and serve.","加黑胡椒即成。"]],"tip":"Low heat keeps egg whites tender, never rubbery. 細火炒蛋白先唔會韌。"},{"id":"r7","cat":"breakfast","en":"Soy Milk, Jammy Eggs & Edamame Plate","cn":"無糖豆漿溏心蛋枝豆早餐","img":"https://i.ytimg.com/vi/mcXzPF4-LFw/hqdefault.jpg","ytid":"mcXzPF4-LFw","time":"10 min","serves":"1","ing":[["🥚","Eggs 2","雞蛋 2隻"],["🥛","Unsweetened soy milk 1 glass","無糖豆漿 1杯"],["🫛","Frozen edamame ½ cup","急凍枝豆 半杯"],["🧂","Salt / soy sauce few drops","鹽或豉油少許"]],"steps":[["Boil eggs 7 minutes for jammy yolks; cool in iced water and peel.","雞蛋滾水煮7分鐘（溏心），冰水浸凍去殼。"],["Boil edamame 3 minutes in salted water.","枝豆鹽水灼3分鐘。"],["Warm the soy milk (no sugar).","豆漿加熱（不加糖）。"],["Serve together — about 20g protein, almost no sugar.","一齊上碟——約20克蛋白質，幾乎無糖。"]],"tip":"7 minutes exactly = jammy; 9 minutes = fully set. 足7分鐘係溏心，9分鐘全熟。"},{"id":"r8","cat":"lunch","en":"Garlic Prawn Spaghetti (Aglio e Olio)","cn":"蒜香蝦仁意粉","img":"https://i.ytimg.com/vi/SpkBLuHmGos/hqdefault.jpg","ytid":"SpkBLuHmGos","time":"25 min","serves":"2","ing":[["🍝","Spaghetti 200g","意粉 200克"],["🦐","Prawns, peeled 15","蝦仁 15隻"],["🧄","Garlic, sliced 6 cloves","蒜片 6瓣"],["🌶️","Dried chilli flakes ½ tsp","乾辣椒碎 半茶匙"],["🫒","Olive oil 4 tbsp","橄欖油 4湯匙"],["🌿","Parsley, chopped","番茜碎少許"],["🍋","Lemon ½","檸檬 半個"],["🧂","Salt & black pepper","鹽、黑胡椒"]],"steps":[["Cook spaghetti in well-salted water 1 minute less than the packet says; keep 1 cup pasta water.","意粉用加鹽滾水煮（比包裝時間少1分鐘），留1杯煮麵水。"],["Sauté prawns in 1 tbsp oil until pink; remove.","1湯匙油炒蝦至轉色，盛起。"],["Gently cook garlic and chilli in remaining oil over low heat until golden — do not burn.","餘下油細火炒香蒜片和辣椒碎至金黃（切勿炒燶）。"],["Add spaghetti, prawns and a splash of pasta water; toss until glossy.","加入意粉、蝦和少許煮麵水，兜勻至有光澤。"],["Finish with parsley, lemon juice, salt and pepper.","最後加番茜、檸檬汁、鹽和黑胡椒。"]],"tip":"The starchy pasta water makes the sauce cling. 煮麵水的澱粉令醬汁掛在麵上。"},{"id":"r9","cat":"lunch","en":"Teriyaki Chicken Rice Bowl","cn":"照燒雞肉飯","img":"https://i.ytimg.com/vi/lNTUc_V_6Gs/hqdefault.jpg","ytid":"lNTUc_V_6Gs","time":"25 min","serves":"2","ing":[["🍗","Boneless chicken thighs 2","無骨雞髀 2隻"],["🍶","Soy sauce 3 tbsp","豉油 3湯匙"],["🍶","Mirin 2 tbsp + sake 1 tbsp (or water)","味醂 2湯匙、清酒 1湯匙（可用水代替）"],["🍯","Sugar or honey 1 tbsp","糖或蜜糖 1湯匙"],["🫚","Ginger, grated 1 tsp","薑蓉 1茶匙"],["🍚","Cooked rice 2 bowls","白飯 2碗"],["🥦","Broccoli or greens, blanched","西蘭花或青菜（灼熟）"],["⚪","Sesame seeds & spring onion","芝麻、蔥花"]],"steps":[["Mix soy, mirin, sake, sugar and ginger for the sauce.","豉油、味醂、清酒、糖、薑蓉調成醬汁。"],["Pan-fry chicken skin-side down over medium heat 6 minutes, flip, 4 more minutes.","雞髀皮向下中火煎6分鐘，反轉再煎4分鐘。"],["Pour off excess fat, add sauce and simmer until thick and glossy, coating the chicken.","倒走多餘油份，加醬汁煮至濃稠掛汁。"],["Slice chicken, place on rice with vegetables; spoon over sauce, top with sesame and spring onion.","雞肉切件放飯上，伴蔬菜，淋汁，撒芝麻蔥花。"]],"tip":"Simmer the sauce until it bubbles thickly — that's the shine. 醬汁煮至起大泡才有照燒光澤。"},{"id":"r10","cat":"lunch","en":"Thai Basil Minced Pork (Pad Krapow)","cn":"泰式打拋豬肉飯","img":"https://i.ytimg.com/vi/9PDqMyFuuFQ/hqdefault.jpg","ytid":"9PDqMyFuuFQ","time":"20 min","serves":"2","ing":[["🐖","Minced pork 300g","免治豬肉 300克"],["🌿","Thai / holy basil leaves 1 big handful","泰國羅勒/打拋葉 一大把"],["🧄","Garlic 4 cloves + bird's eye chilli 2, chopped","蒜 4瓣、指天椒 2隻（剁碎）"],["🍶","Fish sauce 1 tbsp + oyster sauce 1 tbsp","魚露 1湯匙、蠔油 1湯匙"],["🍶","Dark soy ½ tsp + sugar 1 tsp","老抽半茶匙、糖 1茶匙"],["🥚","Fried egg 2 (optional)","煎蛋 2隻（可加）"],["🍚","Cooked rice 2 bowls","白飯 2碗"]],"steps":[["Pound or chop garlic and chilli; stir-fry in oil over high heat until fragrant.","蒜和辣椒剁碎，大火爆香。"],["Add minced pork, break it up and fry until browned.","下免治豬肉炒散至微焦香。"],["Season with fish sauce, oyster sauce, dark soy and sugar; add a splash of water.","加魚露、蠔油、老抽、糖，灒少許水。"],["Turn off heat, toss in basil until just wilted.","熄火，拌入羅勒葉至剛軟。"],["Serve over rice, topped with a crispy fried egg.","盛飯上，加脆邊煎蛋。"]],"tip":"Basil goes in last — heat kills its aroma. 羅勒最後放，久煮會失香味。"},{"id":"r11","cat":"lunch","en":"Korean Beef Bulgogi Bowl","cn":"韓式烤牛肉飯","img":"https://i.ytimg.com/vi/Gd46oK8GOlY/hqdefault.jpg","ytid":"Gd46oK8GOlY","time":"25 min + marinate","serves":"2-3","ing":[["🥩","Beef (ribeye/sirloin), thinly sliced 400g","牛肉薄片（肉眼/西冷）400克"],["🍶","Soy sauce 3 tbsp","豉油 3湯匙"],["🍐","Grated pear or apple 3 tbsp","梨蓉或蘋果蓉 3湯匙"],["🧄","Garlic, minced 3 cloves","蒜蓉 3瓣"],["🍯","Sugar 1 tbsp + sesame oil 1 tbsp","糖 1湯匙、麻油 1湯匙"],["🧅","Onion ½, sliced + spring onion","洋蔥半個、蔥段"],["🍚","Rice, lettuce, sesame seeds to serve","白飯、生菜、芝麻"]],"steps":[["Mix soy, pear, garlic, sugar and sesame oil; marinate beef 30 minutes (or overnight).","豉油、梨蓉、蒜蓉、糖、麻油拌勻，醃牛肉30分鐘（過夜更佳）。"],["Heat a pan until very hot; stir-fry beef and onion in batches without crowding.","燒熱鑊，分批大火快炒牛肉和洋蔥。"],["Cook until edges caramelise, about 2–3 minutes per batch.","炒至邊緣微焦糖化，每批約2至3分鐘。"],["Serve on rice with lettuce, sesame seeds and spring onion.","盛飯上，配生菜、芝麻、蔥花。"]],"tip":"Grated pear tenderises the beef naturally. 梨蓉天然鬆肉又帶甜。"},{"id":"r12","cat":"lunch","en":"Vietnamese Fresh Spring Rolls","cn":"越南鮮蝦豬肉米紙卷","img":"https://i.ytimg.com/vi/S2CZtOsI1gs/hqdefault.jpg","ytid":"S2CZtOsI1gs","time":"40 min","serves":"3-4","ing":[["🦐","Shrimp, boiled & halved 12","熟蝦（開邊）12隻"],["🐖","Pork belly or loin, boiled & sliced 200g","豬腩肉或豬柳（灼熟切片）200克"],["🍚","Rice paper 12 sheets + rice vermicelli 100g","米紙 12張、米粉 100克"],["🥬","Lettuce, mint, coriander","生菜、薄荷、芫荽"],["🥕","Carrot & cucumber, julienned","紅蘿蔔絲、青瓜絲"],["🥜","Peanut-hoisin dip: hoisin 3 tbsp + peanut butter 1 tbsp + warm water","花生海鮮醬：海鮮醬3湯匙+花生醬1湯匙+溫水調開"]],"steps":[["Boil pork 20 minutes, slice thinly. Boil shrimp, halve lengthwise. Cook vermicelli.","豬肉灼20分鐘切薄片；蝦灼熟開邊；米粉煮熟。"],["Dip a rice paper sheet briefly in warm water and lay flat.","米紙快速過溫水，平放。"],["Layer lettuce, herbs, vermicelli, carrot, pork, then shrimp (pink side down).","順序鋪生菜、香草、米粉、蘿蔔絲、豬肉，最後蝦（紅面向下）。"],["Fold sides in and roll tightly.","兩邊摺入，捲實。"],["Serve with peanut-hoisin dipping sauce.","伴花生海鮮醬食用。"]],"tip":"Don't over-soak the rice paper — 2 seconds is enough, it keeps softening. 米紙浸2秒即可，之後會繼續變軟。"},{"id":"r13","cat":"lunch","en":"Chicken Penne in Tomato Basil Sauce","cn":"番茄羅勒雞肉長通粉","img":"https://i.ytimg.com/vi/kRXdQj69Uf8/hqdefault.jpg","ytid":"kRXdQj69Uf8","time":"30 min","serves":"2-3","ing":[["🍝","Penne 250g","長通粉 250克"],["🍗","Chicken breast, cubed 300g","雞胸肉粒 300克"],["🍅","Canned crushed tomatoes 400g","罐裝碎番茄 400克"],["🧄","Garlic 3 cloves + onion ½","蒜 3瓣、洋蔥半個"],["🌿","Fresh basil 1 handful","新鮮羅勒 一把"],["🧀","Parmesan, grated","巴馬臣芝士碎"],["🫒","Olive oil, salt, pepper, pinch of sugar","橄欖油、鹽、胡椒、少許糖"]],"steps":[["Cook penne al dente; reserve some pasta water.","長通粉煮至彈牙，留少許煮麵水。"],["Season and sear chicken cubes until golden; remove.","雞粒調味煎至金黃，盛起。"],["Sauté onion and garlic, add tomatoes, sugar, salt; simmer 10 minutes.","炒香洋蔥蒜蓉，加碎番茄、糖、鹽，煮10分鐘。"],["Return chicken, add penne and pasta water; toss.","雞肉回鑊，加長通粉和煮麵水兜勻。"],["Tear in basil, top with parmesan.","加羅勒葉，撒芝士。"]],"tip":"A pinch of sugar balances tinned tomato acidity. 少許糖可中和罐頭番茄酸味。"},{"id":"r14","cat":"lunch","en":"Thai Minced Pork Lettuce Wraps","cn":"泰式肉碎生菜包","img":"https://i.ytimg.com/vi/4mKaRnL4sUo/hqdefault.jpg","ytid":"4mKaRnL4sUo","time":"20 min","serves":"2-3","ing":[["🐖","Minced pork 300g","免治豬肉 300克"],["🥬","Iceberg or baby gem lettuce cups 8","生菜杯 8片"],["🧄","Garlic, shallot, chilli (chopped)","蒜、乾蔥、辣椒（剁碎）"],["🍋","Lime juice 2 tbsp + fish sauce 1½ tbsp","青檸汁 2湯匙、魚露 1½湯匙"],["🍯","Sugar 1 tsp","糖 1茶匙"],["🌿","Mint & coriander leaves","薄荷、芫荽"],["🥜","Toasted rice powder or crushed peanuts 1 tbsp","炒米粉或花生碎 1湯匙"]],"steps":[["Stir-fry garlic, shallot and chilli until fragrant.","爆香蒜、乾蔥、辣椒。"],["Add pork; fry until cooked through and lightly browned.","下豬肉炒熟至微焦。"],["Season with fish sauce, lime juice and sugar; turn off heat.","加魚露、青檸汁、糖調味，熄火。"],["Toss with mint, coriander and toasted rice powder.","拌入薄荷、芫荽、炒米粉。"],["Spoon into lettuce cups and serve.","舀入生菜杯即成。"]],"tip":"This is from your saved video (HOMAYDO). 這是你收藏的影片食譜。"},{"id":"r15","cat":"lunch","en":"Tom Yum Glass Noodles with Prawns","cn":"冬蔭粉絲蝦煲","img":"https://i.ytimg.com/vi/fqOxIHr87jY/hqdefault.jpg","ytid":"fqOxIHr87jY","time":"30 min","serves":"2-3","ing":[["🦐","Large prawns 8-10","大蝦 8至10隻"],["🍜","Glass noodles (mung bean vermicelli) 100g, soaked","粉絲 100克（浸軟）"],["🌶️","Tom yum paste 2 tbsp","冬蔭功醬 2湯匙"],["🥥","Coconut milk or evaporated milk 100ml","椰奶或淡奶 100毫升"],["🌿","Lemongrass 1, kaffir lime leaves 3, galangal slices","香茅1支、青檸葉3片、南薑片"],["🍄","Mushrooms 6","蘑菇 6隻"],["🍋","Lime juice + fish sauce to taste","青檸汁、魚露適量"]],"steps":[["Sear prawns in a little oil until half cooked; remove.","蝦用少許油煎至半熟，盛起。"],["Fry tom yum paste with lemongrass, galangal and lime leaves until fragrant.","炒香冬蔭功醬、香茅、南薑、青檸葉。"],["Add 500ml water, mushrooms; simmer 5 minutes, add coconut milk.","加水500毫升、蘑菇煮5分鐘，加椰奶。"],["Add soaked glass noodles; simmer until they absorb the broth.","下粉絲煮至吸收湯汁。"],["Return prawns, finish with lime juice and fish sauce.","蝦回鑊，加青檸汁、魚露即成。"]],"tip":"This is from your saved video (Ricky). 這是你收藏的影片食譜。"},{"id":"r16","cat":"soup","en":"Papaya, Chicken Feet & Peanut Soup","cn":"木瓜雞腳花生眉豆湯","img":"WhatsApp Image 2026-04-16 at 2.40.00 PM.jpeg","ytid":"8Zae1M6V6Pc","time":"2 hr","serves":"4-6","ing":[["🐔","Chicken feet 8, nails trimmed","雞腳 8隻（剪甲）"],["🐖","Pork bones or lean pork 300g","豬骨或瘦肉 300克"],["🥭","Half-ripe papaya 1, chunks","半熟木瓜 1個（切塊）"],["🥜","Peanuts 50g + black-eyed peas 50g (soaked 1 hr)","花生 50克、眉豆 50克（浸1小時）"],["🫚","Ginger 3 slices","薑 3片"],["🌰","Honey dates 2","蜜棗 2粒"],["💧","Water 2.5L + salt to taste","水 2.5公升、鹽適量"]],"steps":[["Blanch chicken feet and pork bones in boiling water 3 minutes; rinse.","雞腳、豬骨汆水3分鐘，沖淨。"],["Bring water to a boil with ginger; add everything except papaya and salt.","水加薑煮滾，除木瓜和鹽外全部落煲。"],["Boil hard 10 minutes, then simmer 1 hour.","大火10分鐘，轉細火煲1小時。"],["Add papaya; simmer 30–40 more minutes.","加木瓜，再煲30至40分鐘。"],["Season with salt just before serving.","飲用前才落鹽。"]],"tip":"Use half-ripe papaya so it holds its shape. 半熟木瓜煲完不會散。"},{"id":"r17","cat":"soup","en":"Flathead Fish Soup with Yam & Red Dates","cn":"淮山牛鰍魚湯","img":"https://i.ytimg.com/vi/WoKNi1yivbg/hqdefault.jpg","ytid":"WoKNi1yivbg","time":"1.5 hr","serves":"4","ing":[["🐟","Flathead fish (牛鰍魚) 1, cleaned","牛鰍魚 1條（劏淨）"],["🍠","Fresh Chinese yam 300g, chunks","鮮淮山 300克（切塊）"],["🥕","Carrot 1, chunks","紅蘿蔔 1條（切塊）"],["🌰","Red dates 6, pitted","紅棗 6粒（去核）"],["🫚","Ginger 4 slices","薑 4片"],["🐖","Lean pork 200g (optional)","瘦肉 200克（可加）"],["💧","Hot water 2L + salt","熱水 2公升、鹽適量"]],"steps":[["Pat fish very dry. Fry with ginger in a little oil until both sides are golden.","魚抹乾，用薑和少許油煎至兩面金黃。"],["Pour in HOT water — the soup turns milky white immediately.","加入滾水，湯即變奶白色。"],["Transfer to a pot with yam, carrot, dates and pork.","連湯倒入煲，加淮山、紅蘿蔔、紅棗、瘦肉。"],["Boil 10 minutes, then simmer 1 hour.","大火10分鐘，細火煲1小時。"],["Season with salt before serving.","飲前落鹽。"]],"tip":"Fry the fish + hot water = milky soup. Use a soup bag for the fish to avoid bones. 煎魚加滾水湯才奶白；魚可入湯袋防魚骨。"},{"id":"r18","cat":"soup","en":"Clear Broth Beef Brisket","cn":"清湯牛腩","img":"https://i.ytimg.com/vi/dUq64G_HRyI/hqdefault.jpg","ytid":"dUq64G_HRyI","time":"2.5 hr","serves":"4","ing":[["🥩","Beef brisket 900g","牛腩 900克"],["🥬","Daikon radish 1, large chunks","白蘿蔔 1條（切大件）"],["🫚","Ginger 5 slices + spring onion 2","薑 5片、蔥 2條"],["🌟","Star anise 2 + bay leaf 2 + white peppercorns 1 tsp","八角2粒、香葉2片、白胡椒粒1茶匙"],["🌰","Chu hou paste 1 tbsp (optional) or rock sugar small piece","柱侯醬1湯匙（可省）或冰糖一小粒"],["🧂","Salt + fish sauce 1 tsp","鹽、魚露 1茶匙"],["💧","Water 2.5L","水 2.5公升"]],"steps":[["Blanch brisket from cold water; rinse and cut into chunks.","牛腩凍水落鑊汆水，沖淨切件。"],["Simmer brisket with ginger, spring onion and spices, skimming foam, 2 hours until tender.","牛腩加薑蔥香料細火煲2小時，撇走浮沫，至腍。"],["Add daikon in the last 30–40 minutes.","最後30至40分鐘加白蘿蔔。"],["Season lightly with salt and fish sauce — keep the broth clear and clean-tasting.","以鹽和魚露輕調味，保持湯清味鮮。"],["Serve with noodles or on its own.","可配麵或淨食。"]],"tip":"Skim patiently and never boil hard — that's the secret of clear broth. 常撇沫、忌大滾，湯先會清。"},{"id":"r19","cat":"soup","en":"Lemony Lentil & Chickpea Soup","cn":"檸檬扁豆鷹嘴豆湯","img":"https://i.ytimg.com/vi/cv4U_rGZDdM/hqdefault.jpg","ytid":"cv4U_rGZDdM","time":"45 min","serves":"4","extra":{"label":"Written recipe 文字食譜","url":"https://www.andiemitchell.com/vegetarian-lentil-and-chickpea-soup/"},"ing":[["🫘","Brown or green lentils 1 cup, rinsed","啡/綠扁豆 1杯（洗淨）"],["🫘","Chickpeas 1 can, drained","罐裝鷹嘴豆 1罐（隔水）"],["🥕","Carrot 2 + celery 2 + onion 1 (diced)","紅蘿蔔2條、西芹2條、洋蔥1個（切粒）"],["🧄","Garlic 3 cloves + cumin 1 tsp + paprika 1 tsp","蒜3瓣、小茴香粉1茶匙、紅椒粉1茶匙"],["🍅","Canned tomatoes 400g","罐裝番茄 400克"],["🥬","Spinach 2 handfuls","菠菜 兩把"],["🍋","Lemon juice ½ lemon + olive oil, salt, pepper","檸檬汁半個、橄欖油、鹽、胡椒"],["💧","Stock or water 1.5L","上湯或水 1.5公升"]],"steps":[["Sauté onion, carrot and celery in olive oil 5 minutes; add garlic and spices.","橄欖油炒洋蔥、紅蘿蔔、西芹5分鐘，加蒜和香料。"],["Add lentils, tomatoes and stock; simmer 25–30 minutes until lentils are tender.","加扁豆、番茄、上湯，煮25至30分鐘至扁豆腍。"],["Add chickpeas and spinach; cook 5 minutes.","加鷹嘴豆、菠菜煮5分鐘。"],["Finish with lemon juice, salt and pepper.","最後加檸檬汁、鹽、胡椒。"]],"tip":"From your saved link — high fibre, very filling. 來自你收藏的食譜連結，高纖飽肚。"},{"id":"r20","cat":"soup","en":"Snow Fungus & Fig Pork Bone Soup","cn":"雪耳無花果豬骨湯","img":"https://i.ytimg.com/vi/nBjxAq_c-bI/hqdefault.jpg","ytid":"nBjxAq_c-bI","time":"2 hr","serves":"4-6","ing":[["🐖","Pork bones 600g","豬骨 600克"],["🍄","Snow fungus 1, soaked & torn","雪耳 1朵（浸發撕小）"],["🌰","Dried figs 4","無花果乾 4粒"],["🥕","Carrot 1 + corn 1, chunks","紅蘿蔔1條、粟米1條（切件）"],["🌰","South & north apricot kernels 2 tbsp","南北杏 2湯匙"],["🫚","Ginger 3 slices","薑 3片"],["💧","Water 2.5L + salt","水 2.5公升、鹽適量"]],"steps":[["Blanch pork bones; rinse.","豬骨汆水沖淨。"],["Soak snow fungus 30 minutes; remove the yellow core and tear into pieces.","雪耳浸30分鐘，去黃芯撕小朵。"],["Put everything except salt in a pot; boil 10 minutes then simmer 1.5 hours.","除鹽外全部落煲，大火10分鐘後細火煲1.5小時。"],["Season with salt before serving.","飲前落鹽。"]],"tip":"This is from your saved video (BearBear Kitchen). 這是你收藏的影片食譜。"},{"id":"r21","cat":"soup","en":"Green & Red Radish Pork Bone Soup","cn":"青紅蘿蔔豬骨湯","img":"https://i.ytimg.com/vi/uLeQrY5ng-o/hqdefault.jpg","ytid":"uLeQrY5ng-o","time":"2 hr","serves":"4-6","ing":[["🥬","Green radish 1, chunks","青蘿蔔 1條（切件）"],["🥕","Carrots 2, chunks","紅蘿蔔 2條（切件）"],["🐖","Pork bones 600g","豬骨 600克"],["🌰","South & north apricot kernels 2 tbsp + honey dates 2","南北杏2湯匙、蜜棗2粒"],["🍊","Dried tangerine peel 1 small piece","陳皮 1小角"],["💧","Water 2.5L + salt","水 2.5公升、鹽適量"]],"steps":[["Blanch pork bones; rinse.","豬骨汆水沖淨。"],["Put all ingredients except salt into boiling water.","除鹽外全部材料放入滾水。"],["Boil hard 10 minutes, then simmer 1.5–2 hours.","大火10分鐘，細火煲1.5至2小時。"],["Season with salt before serving.","飲前落鹽。"]],"tip":"Sweet, cooling, classic weekly soup. 清熱下火，最經典嘅家常老火湯。"},{"id":"r22","cat":"soup","en":"Lotus Root, Dried Octopus & Peanut Soup","cn":"蓮藕章魚花生湯","img":"https://i.ytimg.com/vi/U5xopBg41vo/hqdefault.jpg","ytid":"U5xopBg41vo","time":"2 hr","serves":"4-6","ing":[["🪷","Lotus root 500g, thick slices","蓮藕 500克（切厚片）"],["🦑","Dried octopus 1, soaked 30 min","乾章魚 1隻（浸30分鐘）"],["🥜","Peanuts 60g + black-eyed peas 40g","花生60克、眉豆40克"],["🐖","Pork bones or lean pork 400g","豬骨或瘦肉 400克"],["🍊","Dried tangerine peel 1 piece + ginger 2 slices","陳皮1角、薑2片"],["💧","Water 2.5L + salt","水 2.5公升、鹽適量"]],"steps":[["Soak octopus; blanch pork; soak peanuts and peas 1 hour.","章魚浸軟；豬骨汆水；花生眉豆浸1小時。"],["Lightly toast the octopus in a dry pan until fragrant (optional but better).","章魚白鑊烘香（可省但更香）。"],["Put everything except salt in boiling water; boil 10 minutes, simmer 1.5–2 hours.","除鹽外落煲，大火10分鐘，細火煲1.5至2小時。"],["Season with salt.","飲前落鹽。"]],"tip":"Octopus + lotus root gives the classic sweet 'old fire' flavour. 章魚配蓮藕，湯水鮮甜格外惹味。"},{"id":"r23","cat":"soup","en":"Sweet Corn & Fish Maw Thick Soup","cn":"粟米魚肚羹","img":"https://i.ytimg.com/vi/BwncWFHdZJQ/hqdefault.jpg","ytid":"BwncWFHdZJQ","time":"40 min","serves":"4","ing":[["🌽","Creamed corn 1 can + fresh corn kernels ½ cup","粟米蓉1罐、鮮粟米粒半杯"],["🐟","Fish maw 60g (soaked & cut small)","魚肚 60克（浸發剪小）"],["🍗","Chicken breast, shredded 100g (optional)","雞胸肉絲 100克（可加）"],["🥚","Egg whites 2, beaten","蛋白 2隻（打勻）"],["🍲","Chicken stock 800ml + ginger 2 slices","雞湯800毫升、薑2片"],["🌽","Cornstarch 2 tbsp + water 3 tbsp","粟粉2湯匙、水3湯匙"],["🧂","Salt, white pepper, sesame oil","鹽、白胡椒粉、麻油"]],"steps":[["Soak fish maw until soft, squeeze dry, cut into small pieces; blanch with ginger to remove smell.","魚肚浸軟揸乾剪小件，用薑水灼過辟味。"],["Bring stock to a boil; add creamed corn, corn kernels, fish maw and chicken.","雞湯煮滾，加粟米蓉、粟米粒、魚肚、雞絲。"],["Simmer 10 minutes; thicken with cornstarch slurry.","煮10分鐘，粟粉水埋芡。"],["Turn heat low; stream in egg whites while stirring slowly for silky ribbons.","轉細火，慢慢倒入蛋白同時輕攪成蛋花。"],["Season with salt, pepper and sesame oil.","加鹽、白胡椒粉、麻油調味。"]],"tip":"Stir slowly when adding egg white — that's what makes silky ribbons. 落蛋白時慢攪，蛋花先幼滑。"},{"id":"r24","cat":"appetizer","en":"Steamed Tofu with Shrimp & Garlic Sauce","cn":"蒜蓉蝦仁蒸豆腐","img":"WhatsApp Image 2026-07-09 at 10.48.15 AM.jpeg","ytid":"TxBHFw5QNnU","time":"20 min","serves":"3-4","ing":[["🧈","Soft tofu 1 block, cut into squares","嫩豆腐 1磚（切方塊）"],["🦐","Shrimp, peeled 12","蝦仁 12隻"],["🧄","Garlic, minced 3 tbsp","蒜蓉 3湯匙"],["🍶","Light soy 1 tbsp + oyster sauce 1 tsp + sugar ½ tsp","生抽1湯匙、蠔油1茶匙、糖半茶匙"],["🌽","Cornstarch ½ tsp (for shrimp)","粟粉半茶匙（醃蝦）"],["🧅","Spring onion, chopped","蔥花"],["🫒","Oil 2 tbsp","油 2湯匙"]],"steps":[["Arrange tofu squares on a plate; place one marinated shrimp on each.","豆腐排碟，每件豆腐放一隻醃好的蝦仁。"],["Fry half the garlic in oil until golden; mix with raw garlic, soy, oyster sauce and sugar.","一半蒜蓉炸至金黃，與生蒜、生抽、蠔油、糖拌成醬。"],["Spoon garlic sauce over each piece.","每件淋上蒜蓉醬。"],["Steam over high heat 6–8 minutes.","大火蒸6至8分鐘。"],["Pour away excess water, top with spring onion and a drizzle of hot oil.","倒走多餘水分，撒蔥花，淋少許熱油。"]],"tip":"Half-fried, half-raw garlic gives the classic 金銀蒜 flavour. 金銀蒜（半生半炸）最香。"},{"id":"r25","cat":"appetizer","en":"Stuffed Hairy Gourd Rings with Pork & Mushroom","cn":"豬肉冬菇釀節瓜","img":"WhatsApp Image 2026-07-15 at 10.10.59 AM.jpeg","ytid":"T2GfO55-AAI","time":"40 min","serves":"3-4","ing":[["🥒","Hairy gourd (節瓜) 2, cut into 4cm rings, cored","節瓜 2條（切4厘米圈，去芯）"],["🐖","Minced pork 250g","免治豬肉 250克"],["🍄","Dried shiitake 4, soaked & diced","冬菇 4隻（浸軟切粒）"],["🧅","Water chestnuts or spring onion, chopped","馬蹄或蔥（切碎）"],["🍶","Soy 2 tsp + oyster sauce 1 tsp + sesame oil + white pepper","生抽2茶匙、蠔油1茶匙、麻油、白胡椒粉"],["🌽","Cornstarch 2 tsp + more for dusting","粟粉2茶匙、另備少許撲粉"],["💧","Stock 150ml for the glaze","上湯150毫升（打芡用）"]],"steps":[["Mix pork with mushrooms, water chestnut, seasonings and cornstarch; stir one direction until sticky.","豬肉加冬菇、馬蹄、調味、粟粉，同一方向攪至起膠。"],["Peel gourd, cut rings, remove core; dust inside with cornstarch.","節瓜去皮切圈去芯，內圈撲粟粉。"],["Fill each ring with pork mixture, mounding slightly.","釀入肉餡，稍微隆起。"],["Steam 15 minutes (or pan-fry then braise).","大火蒸15分鐘（或煎香後炆）。"],["Thicken the plate juices + stock with cornstarch; pour over.","蒸出的汁加上湯埋芡，淋面。"]],"tip":"Stir the filling one direction only — it binds better. 餡料順一個方向攪先夠黏。"},{"id":"r26","cat":"appetizer","en":"Teochew Cold Fish (Grey Mullet / Threadfin)","cn":"潮式凍烏頭 / 凍馬友","img":"WhatsApp Image 2026-06-20 at 1.18.31 PM.jpeg","ytid":"rqWolol-F3c","time":"25 min + chill","serves":"3-4","ing":[["🐟","Grey mullet or threadfin (馬友) 1, cleaned","烏頭或馬友 1條（劏淨）"],["🧂","Coarse salt 1 tbsp","粗鹽 1湯匙"],["🫚","Ginger 3 slices + spring onion 2","薑3片、蔥2條"],["🫘","Puning bean sauce (普寧豆醬) for dipping","普寧豆醬（蘸食）"]],"steps":[["Rub fish lightly with salt inside and out.","魚身內外抹少許鹽。"],["Steam or poach with ginger and spring onion 10–12 minutes until just cooked.","加薑蔥蒸或浸煮10至12分鐘至剛熟。"],["Cool to room temperature, then refrigerate at least 2 hours.","放涼後入雪櫃冷藏至少2小時。"],["Serve cold with Puning bean sauce.","凍食，配普寧豆醬。"]],"tip":"Chilling firms the flesh and brings out sweetness — classic 潮州魚飯. 凍食魚肉更結實鮮甜，正宗潮州魚飯食法。"},{"id":"r27","cat":"main","en":"Soy Sauce Chicken","cn":"豉油雞","img":"WhatsApp Image 2026-06-20 at 1.16.03 PM.jpeg","ytid":"Ib7yiYa65lM","time":"50 min","serves":"4","ing":[["🐔","Whole chicken 1 (about 1.5kg) or chicken legs 4","光雞 1隻（約1.5公斤）或雞髀 4隻"],["🍶","Light soy 250ml + dark soy 60ml","生抽 250毫升、老抽 60毫升"],["🍚","Rose wine (玫瑰露) or Shaoxing wine 2 tbsp","玫瑰露或紹興酒 2湯匙"],["🍬","Rock sugar 60g","冰糖 60克"],["🫚","Ginger 4 slices + spring onion 3 + garlic 3 cloves","薑4片、蔥3條、蒜3瓣"],["🌟","Star anise 2 + cinnamon 1 stick + bay leaf 2","八角2粒、桂皮1支、香葉2片"],["💧","Water 600ml","水 600毫升"]],"steps":[["Simmer all sauce ingredients 10 minutes to make the master stock.","所有滷汁材料煮10分鐘成豉油滷水。"],["Lower in the chicken breast-side down; simmer gently 15 minutes covered.","雞胸向下放入，加蓋細火浸煮15分鐘。"],["Turn chicken over; simmer 15 more minutes, spooning sauce over.","反轉再煮15分鐘，不時淋汁。"],["Turn off heat and let it steep 15 minutes in the covered pot.","熄火加蓋焗15分鐘。"],["Rest 10 minutes, chop and pour over some sauce.","取出稍涼斬件，淋上滷汁。"]],"tip":"Gentle steeping (not boiling) keeps the meat juicy. 浸熟唔係滾熟，肉先嫩滑多汁。"},{"id":"r28","cat":"main","en":"Braised Pork Ribs with Lotus Root","cn":"蓮藕炆排骨","img":"WhatsApp Image 2026-06-20 at 1.16.42 PM.jpeg","ytid":"-E79Cqx-8mc","time":"1 hr","serves":"4","ing":[["🍖","Pork ribs 600g, cut into pieces","排骨 600克（切件）"],["🪷","Lotus root 400g, thick slices","蓮藕 400克（切厚片）"],["🫚","Ginger 3 slices + garlic 3 cloves + shallot 2","薑3片、蒜3瓣、乾蔥2粒"],["🍶","Light soy 2 tbsp + dark soy 1 tbsp + oyster sauce 1 tbsp","生抽2湯匙、老抽1湯匙、蠔油1湯匙"],["🍚","Shaoxing wine 1 tbsp + rock sugar small piece","紹興酒1湯匙、冰糖一小粒"],["💧","Water to just cover","水（浸過材料面）"],["🧅","Spring onion to garnish","蔥花裝飾"]],"steps":[["Blanch ribs; rinse and pat dry.","排骨汆水，沖淨抹乾。"],["Brown ribs with ginger, garlic and shallot in a little oil.","少許油爆香薑蒜乾蔥，排骨煎至微黃。"],["Splash in wine; add soys, oyster sauce and rock sugar.","灒酒，加生抽、老抽、蠔油、冰糖。"],["Add lotus root and water to cover; simmer covered 40–45 minutes.","加蓮藕和水浸面，加蓋炆40至45分鐘。"],["Uncover and reduce the sauce until glossy; garnish with spring onion.","開蓋收汁至濃稠，撒蔥花。"]],"tip":"Thick-cut lotus root stays crunchy-tender after braising. 蓮藕切厚片，炆完粉糯帶爽。"},{"id":"r29","cat":"main","en":"Cantonese Steamed Fish","cn":"清蒸魚（薑蔥）","img":"WhatsApp Image 2026-07-23 at 7.07.17 PM.jpeg","ytid":"NaiL0SeTz_s","time":"20 min","serves":"2-3","ing":[["🐟","Whole fish (pomfret, croaker, sea bass…) 1, about 600g","鮮魚一條（白鯧/黃花魚/鱸魚）約600克"],["🫚","Ginger, half sliced half julienned","薑（半切片半切絲）"],["🧅","Spring onion 3, sectioned & julienned","蔥3條（段+絲）"],["🍶","Steamed fish soy sauce 3 tbsp","蒸魚豉油 3湯匙"],["🫒","Oil 2 tbsp","油 2湯匙"],["🌶️","Red chilli / coriander (optional)","紅椒絲/芫荽（可加）"]],"steps":[["Clean fish, pat very dry; lay ginger slices and spring onion under and inside it.","魚劏淨抹乾，薑片蔥段墊底和放入魚肚。"],["Steam over high heat: 8–10 minutes for a 600g fish. Do not open the lid midway.","大火蒸8至10分鐘（600克魚），中途不開蓋。"],["Pour away the fishy liquid; discard old ginger and onion.","倒走蒸魚水，棄去薑蔥。"],["Top with fresh ginger and spring onion julienne; pour over smoking-hot oil.","鋪上新薑絲蔥絲，淋滾油。"],["Drizzle steamed-fish soy around the fish and serve at once.","沿碟邊淋蒸魚豉油，即上桌。"]],"tip":"Check doneness at the thickest part — flesh should just flake off the bone. 魚背最厚處肉離骨即熟。"},{"id":"r30","cat":"main","en":"Shredded Pork with Green Peppers","cn":"青椒炒肉絲","img":"WhatsApp Image 2026-06-20 at 1.15.44 PM.jpeg","ytid":"mcn1I6R7ufA","time":"20 min","serves":"3","ing":[["🐖","Pork loin, shredded 300g","豬柳肉切絲 300克"],["🫑","Green peppers 2 + red pepper ½, shredded","青椒2個、紅椒半個（切絲）"],["🧄","Garlic 2 cloves + ginger shreds","蒜2瓣、薑絲"],["🍶","Marinade: soy 1 tbsp, wine 1 tsp, cornstarch 2 tsp, water 1 tbsp","醃料：生抽1湯匙、酒1茶匙、粟粉2茶匙、水1湯匙"],["🍶","Sauce: oyster sauce 1 tbsp + soy 1 tsp + sugar ½ tsp","汁：蠔油1湯匙、生抽1茶匙、糖半茶匙"],["🫒","Oil 3 tbsp","油 3湯匙"]],"steps":[["Marinate pork shreds 15 minutes.","肉絲醃15分鐘。"],["Stir-fry pork in 2 tbsp oil until it just changes colour; remove.","2湯匙油炒肉絲至剛轉色，盛起。"],["Stir-fry peppers with a pinch of salt 1 minute.","青紅椒加少許鹽炒1分鐘。"],["Return pork with garlic and ginger; add sauce.","肉絲回鑊，加蒜薑和汁料。"],["Toss over high heat 30 seconds and serve.","大火兜勻30秒上碟。"]],"tip":"Water + cornstarch in the marinade keeps pork silky (velveting). 醃料加水和粟粉，肉絲先夠嫩滑。"},{"id":"r31","cat":"main","en":"Stir-fried Chicken with Lily Bulb & Asparagus","cn":"雞片炒百合蘆筍","img":"WhatsApp Image 2026-07-15 at 10.11.17 AM.jpeg","ytid":"w4DiW9m1D9Q","time":"20 min","serves":"3","ing":[["🍗","Chicken breast, sliced 300g","雞胸肉切片 300克"],["🌷","Fresh lily bulbs 2, petals separated","鮮百合 2個（拆瓣）"],["🥬","Asparagus 8, cut into sections","蘆筍 8條（切段）"],["🔴","Goji berries 1 tbsp (soaked)","杞子 1湯匙（浸軟）"],["🧄","Garlic 2 cloves + ginger 2 slices","蒜2瓣、薑2片"],["🍶","Marinade: soy 2 tsp, cornstarch 1 tsp, water 1 tbsp","醃料：生抽2茶匙、粟粉1茶匙、水1湯匙"],["🧂","Salt, sugar pinch, sesame oil","鹽、糖少許、麻油"]],"steps":[["Marinate chicken slices 15 minutes; blanch asparagus 30 seconds.","雞片醃15分鐘；蘆筍灼30秒。"],["Stir-fry chicken in oil until 80% cooked; remove.","雞片炒至八成熟，盛起。"],["Sauté garlic and ginger; add asparagus and lily bulbs, fry 1 minute.","爆香蒜薑，下蘆筍百合炒1分鐘。"],["Return chicken with goji berries; season with salt and sugar.","雞片回鑊加杞子，鹽糖調味。"],["Finish with a few drops of sesame oil.","最後灑幾滴麻油。"]],"tip":"Lily bulbs only need a minute — overcooking turns them grey. 百合炒1分鐘即可，過火會變灰腍。"},{"id":"r32","cat":"main","en":"Stir-fried Celtuce with Garlic","cn":"蒜香炒萵筍","img":"WhatsApp Image 2026-04-16 at 2.38.57 PM.jpeg","ytid":"xtN4GlI4r84","time":"12 min","serves":"3","ing":[["🥬","Celtuce (萵筍) 1, peeled & sliced diagonally","萵筍 1條（去皮斜切片）"],["🥬","Celtuce leaves (tender part), sectioned","萵筍嫩葉（切段）"],["🧄","Garlic, sliced 4 cloves","蒜片 4瓣"],["🧂","Salt ½ tsp + sugar pinch","鹽半茶匙、糖少許"],["🫒","Oil 2 tbsp","油 2湯匙"],["💧","Water 2 tbsp","水 2湯匙"]],"steps":[["Peel celtuce stem thoroughly (remove all fibrous skin); slice thinly on the diagonal.","萵筍徹底去皮（纖維外皮要去清），斜切薄片。"],["Heat oil, fry garlic until fragrant.","燒油爆香蒜片。"],["Add celtuce slices, stir-fry over high heat 1–2 minutes.","下萵筍片大火炒1至2分鐘。"],["Add leaves, salt, sugar and a splash of water; toss until just tender-crisp.","加嫩葉、鹽、糖、少許水，炒至剛爽腍。"]],"tip":"Keep it crisp — celtuce should still have bite. 萵筍要保持爽脆口感。"},{"id":"r33","cat":"appetizer","en":"Braised Japanese Eggplant","cn":"紅燒日本茄子","img":"WhatsApp Image 2026-07-09 at 10.43.00 AM.jpeg","ytid":"4UVPEbmb1Tg","time":"25 min","serves":"3","ing":[["🍆","Japanese eggplants 2, cut into batons","日本茄子 2條（切條）"],["🧄","Garlic 4 cloves + ginger 2 slices, minced","蒜4瓣、薑2片（剁碎）"],["🍶","Soy 2 tbsp + oyster sauce 1 tbsp + sugar 1 tsp","生抽2湯匙、蠔油1湯匙、糖1茶匙"],["💧","Water 100ml + cornstarch 1 tsp","水100毫升、粟粉1茶匙"],["🧅","Spring onion, chopped","蔥花"],["🫒","Oil 3 tbsp","油 3湯匙"],["🧂","Salt (for soaking)","鹽（浸茄子用）"]],"steps":[["Soak eggplant batons in salted water 10 minutes; drain and pat dry (less oil absorbed).","茄子條浸鹽水10分鐘，隔水抹乾（減少吸油）。"],["Pan-fry eggplant in oil until soft and golden; remove.","茄子煎至軟身金黃，盛起。"],["Sauté garlic and ginger; add sauce mixture and bring to a boil.","爆香蒜薑，加醬汁煮滾。"],["Return eggplant; simmer 3–4 minutes, thicken with cornstarch slurry.","茄子回鑊煮3至4分鐘，粟粉水埋芡。"],["Top with spring onion.","撒蔥花。"]],"tip":"Salt-water soak stops the eggplant drinking oil. 鹽水浸過的茄子唔會狂吸油。"},{"id":"r34","cat":"main","en":"Steamed Pork Patty with Water Chestnut","cn":"馬蹄蒸肉餅","img":"https://i.ytimg.com/vi/yNtqS7FKQ_U/hqdefault.jpg","ytid":"yNtqS7FKQ_U","time":"30 min","serves":"3-4","ing":[["🐖","Minced pork (80% lean, 20% fat) 300g","免治豬肉（八瘦二肥）300克"],["🌰","Water chestnuts 6, peeled & roughly chopped","馬蹄 6粒（去皮拍碎切粒）"],["🍄","Dried shiitake 2, soaked & diced (optional)","冬菇 2隻（浸軟切粒，可加）"],["🍶","Light soy 1 tbsp + oyster sauce 1 tsp + sugar ½ tsp","生抽1湯匙、蠔油1茶匙、糖半茶匙"],["🌽","Cornstarch 2 tsp + water 3 tbsp","粟粉2茶匙、水3湯匙"],["🫚","Ginger juice 1 tsp + white pepper + sesame oil","薑汁1茶匙、白胡椒粉、麻油"],["🧅","Spring onion, chopped","蔥花"]],"steps":[["Season pork with soy, oyster sauce, sugar, ginger juice and pepper.","豬肉加生抽、蠔油、糖、薑汁、胡椒粉調味。"],["Add water a spoon at a time, stirring one direction until absorbed; mix in cornstarch — this makes it juicy and springy.","分次加水順一方向攪至吸收，再加粟粉——肉餅先會多汁鬆軟。"],["Fold in water chestnuts and mushrooms.","拌入馬蹄粒和冬菇粒。"],["Spread loosely on a shallow plate — don't press it flat and dense.","肉餅平鋪淺碟，切勿壓實。"],["Steam over high heat 12–15 minutes; top with spring onion and sesame oil.","大火蒸12至15分鐘，撒蔥花、淋麻油。"]],"tip":"Adding water slowly + one-direction stirring = the juicy, fluffy secret. 慢慢加水順一方向攪，就是多汁鬆軟的秘訣。"},{"id":"r35","cat":"main","en":"Mixed Vegetable Stir-fry","cn":"快炒什錦菜","img":"WhatsApp Image 2026-06-20 at 1.20.31 PM.jpeg","ytid":"2D0-1KHSCYU","time":"15 min","serves":"3-4","ing":[["🥬","Asparagus 6 + celery 2 stalks, sectioned","蘆筍6條、西芹2條（切段）"],["🌽","Baby corn 8, halved","玉米筍 8條（開邊）"],["🥕","Carrot ½, sliced","紅蘿蔔半條（切片）"],["🍄","Mushrooms 6, sliced","蘑菇 6隻（切片）"],["🫑","Red pepper ½","紅椒半個"],["🧄","Garlic 3 cloves","蒜 3瓣"],["🍶","Oyster sauce 1 tbsp + soy 1 tsp + sugar pinch","蠔油1湯匙、生抽1茶匙、糖少許"],["💧","Water/stock 3 tbsp + cornstarch ½ tsp","水或上湯3湯匙、粟粉半茶匙"]],"steps":[["Blanch carrot, baby corn and asparagus 1 minute; drain.","紅蘿蔔、玉米筍、蘆筍灼1分鐘，隔水。"],["Stir-fry garlic in oil; add all vegetables over high heat.","爆香蒜片，大火下所有蔬菜。"],["Add sauce and toss 2 minutes.","加汁料炒2分鐘。"],["Thicken with cornstarch slurry so the sauce coats the vegetables.","粟粉水埋薄芡令汁掛菜。"]],"tip":"Blanching first keeps every vegetable evenly crisp. 先灼硬身菜，落鑊炒先會生熟一致。"},{"id":"r36","cat":"main","en":"Steamed Chicken with Shiitake Mushroom","cn":"冬菇蒸雞","img":"https://i.ytimg.com/vi/jQcTRGvD6_0/hqdefault.jpg","ytid":"jQcTRGvD6_0","time":"30 min","serves":"3-4","ing":[["🍗","Chicken thighs, chopped 500g","雞髀切件 500克"],["🍄","Dried shiitake 6, soaked & halved","冬菇 6隻（浸軟開半）"],["🔴","Goji berries 1 tbsp + red dates 3, shredded","杞子1湯匙、紅棗3粒切絲"],["🫚","Ginger shreds 1 tbsp","薑絲 1湯匙"],["🍶","Soy 1½ tbsp + oyster sauce 1 tbsp + wine 1 tbsp + sugar ½ tsp","生抽1½湯匙、蠔油1湯匙、酒1湯匙、糖半茶匙"],["🌽","Cornstarch 2 tsp + sesame oil 1 tsp","粟粉2茶匙、麻油1茶匙"],["🧅","Spring onion","蔥花"]],"steps":[["Marinate chicken with all seasonings, mushrooms and ginger 20 minutes.","雞件加調味、冬菇、薑絲醃20分鐘。"],["Spread flat on a shallow plate; scatter dates and goji.","平鋪淺碟，放紅棗絲、杞子。"],["Steam over high heat 15–18 minutes until juices run clear.","大火蒸15至18分鐘至熟透。"],["Top with spring onion.","撒蔥花。"]],"tip":"Mushroom soaking water can go into the marinade for extra flavour. 浸冬菇水可加入醃料更香。"},{"id":"r37","cat":"main","en":"Tomato Scrambled Eggs","cn":"番茄炒蛋","img":"https://i.ytimg.com/vi/uElf3xvmYXA/hqdefault.jpg","ytid":"uElf3xvmYXA","time":"10 min","serves":"2-3","ing":[["🍅","Ripe tomatoes 3, wedges","熟番茄 3個（切角）"],["🥚","Eggs 4","雞蛋 4隻"],["🧂","Salt ½ tsp + sugar 1 tsp","鹽半茶匙、糖1茶匙"],["🍶","Ketchup 1 tbsp (optional)","茄汁 1湯匙（可加）"],["🧅","Spring onion","蔥花"],["🫒","Oil 3 tbsp","油 3湯匙"]],"steps":[["Scramble seasoned eggs over medium heat until 70% set; remove.","蛋液加鹽炒至七成熟，盛起。"],["Fry tomatoes with salt and sugar until juicy and saucy.","番茄加鹽糖炒至出汁。"],["Return eggs, add ketchup if using, fold gently 30 seconds.","雞蛋回鑊，可加茄汁，輕兜30秒。"],["Top with spring onion; serve with rice.","撒蔥花，配飯食。"]],"tip":"Take the eggs out early — they finish in the tomato sauce. 蛋早啲盛起，回鑊先至嫩。"},{"id":"r38","cat":"main","en":"Blanched Prawns with Dipping Sauce","cn":"白灼蝦","img":"https://i.ytimg.com/vi/kN_eMzoJJmA/hqdefault.jpg","ytid":"kN_eMzoJJmA","time":"15 min","serves":"3-4","ing":[["🦐","Fresh whole prawns 500g","鮮蝦 500克"],["🫚","Ginger 3 slices + spring onion 2","薑3片、蔥2條"],["🍶","Shaoxing wine 1 tbsp","紹興酒 1湯匙"],["🥣","Dip: soy 3 tbsp + sliced chilli + shredded ginger + hot oil 1 tbsp","蘸汁：豉油3湯匙+辣椒圈+薑絲+熱油1湯匙"]],"steps":[["Bring water to a rolling boil with ginger, spring onion and wine.","水加薑蔥酒煮至大滾。"],["Add prawns; cook 2 minutes (3–4 if very large) until just curled and pink.","落蝦煮2分鐘（大蝦3至4分鐘）至捲曲轉紅。"],["Optional: plunge into iced water 30 seconds for bouncy texture.","可過冰水30秒，肉質更爽。"],["Make the dip: pour hot oil over soy, chilli and ginger.","熱油淋豉油、辣椒、薑絲成蘸汁。"]],"tip":"Don't overcook — the moment they curl into a C-shape, they're done. 蝦捲成C形即熟，過火會韌。"},{"id":"r39","cat":"main","en":"Bitter Melon Beef in Black Bean Sauce","cn":"豆豉苦瓜炒牛肉","img":"https://i.ytimg.com/vi/rmf96VSrOOM/hqdefault.jpg","ytid":"rmf96VSrOOM","time":"25 min","serves":"3","ing":[["🥒","Bitter melon 1, deseeded & sliced","苦瓜 1個（去籽切片）"],["🥩","Beef, thinly sliced 300g","牛肉薄片 300克"],["🫘","Fermented black beans 1 tbsp, rinsed & mashed","豆豉 1湯匙（洗淨壓碎）"],["🧄","Garlic 3 cloves + ginger 2 slices","蒜3瓣、薑2片"],["🍶","Marinade: soy 1 tbsp + sugar ½ tsp + cornstarch 2 tsp + water 2 tbsp + oil","醃料：生抽1湯匙、糖半茶匙、粟粉2茶匙、水2湯匙、油"],["🍶","Oyster sauce 1 tbsp + sugar ½ tsp","蠔油1湯匙、糖半茶匙"]],"steps":[["Marinate beef 20 minutes. Slice bitter melon thinly; blanch 1 minute in salted water (less bitter).","牛肉醃20分鐘；苦瓜切薄片鹽水灼1分鐘（減苦味）。"],["Sear beef over high heat until 80% done; remove.","大火炒牛肉至八成熟，盛起。"],["Fry garlic, ginger and black beans until fragrant; add bitter melon 2 minutes.","爆香蒜薑豆豉，下苦瓜炒2分鐘。"],["Return beef with oyster sauce and sugar; toss 30 seconds.","牛肉回鑊加蠔油糖，兜勻30秒。"]],"tip":"Blanching + a little sugar tames the bitterness. 汆水加少少糖，苦味啱啱好。"},{"id":"r40","cat":"dessert","en":"Papaya & Snow Fungus Sweet Soup","cn":"木瓜雪耳糖水","img":"https://i.ytimg.com/vi/JgNhZy7YHIU/hqdefault.jpg","ytid":"JgNhZy7YHIU","time":"1 hr","serves":"4","ing":[["🥭","Ripe papaya ½, cubed","熟木瓜 半個（切粒）"],["🍄","Snow fungus 1, soaked & torn","雪耳 1朵（浸發撕小）"],["🌰","South & north apricot kernels 1 tbsp","南北杏 1湯匙"],["🌰","Lotus seeds 30g (optional)","蓮子 30克（可加）"],["🍬","Rock sugar 60g (to taste)","冰糖 60克（隨口味）"],["💧","Water 1.5L","水 1.5公升"]],"steps":[["Soak snow fungus 30 minutes, trim yellow core, tear small.","雪耳浸30分鐘，去黃芯撕小朵。"],["Simmer snow fungus, apricot kernels and lotus seeds 40 minutes until gluey.","雪耳、南北杏、蓮子煲40分鐘至出膠。"],["Add papaya and rock sugar; simmer 10 more minutes.","加木瓜和冰糖，再煮10分鐘。"],["Serve warm or chilled.","熱食或凍食皆可。"]],"tip":"Long simmering makes snow fungus silky like bird's nest. 雪耳煲耐先滑，係平民燕窩。"},{"id":"r41","cat":"dessert","en":"Red Bean Sweet Soup with Tangerine Peel","cn":"陳皮紅豆沙","img":"https://i.ytimg.com/vi/F1AL9UJBwVE/hqdefault.jpg","ytid":"F1AL9UJBwVE","time":"1.5 hr","serves":"4-6","ing":[["🫘","Red beans 250g, soaked 2 hours","紅豆 250克（浸2小時）"],["🍊","Aged tangerine peel 1 piece, soaked & scraped","陳皮 1角（浸軟刮瓤）"],["🌰","Lotus seeds 50g (optional)","蓮子 50克（可加）"],["🍬","Slab sugar or rock sugar 80–100g","片糖或冰糖 80至100克"],["💧","Water 1.8L","水 1.8公升"]],"steps":[["Boil red beans and tangerine peel in water; simmer 1–1.5 hours until beans burst into 'sand'.","紅豆、陳皮加水煮滾，細火煲1至1.5小時至起沙。"],["Add lotus seeds halfway if using.","蓮子中途加入。"],["Stir in sugar at the end, simmer 10 minutes.","最後落糖，再煮10分鐘。"],["Serve hot.","趁熱食。"]],"tip":"Sugar goes in LAST — adding early stops beans softening. 糖最後落，早落豆唔腍。"},{"id":"r42","cat":"dessert","en":"Black Sesame Sweet Soup","cn":"芝麻糊","img":"https://i.ytimg.com/vi/GiAzagniAW4/hqdefault.jpg","ytid":"GiAzagniAW4","time":"30 min","serves":"3-4","ing":[["⚫","Black sesame seeds 100g, toasted","黑芝麻 100克（炒香）"],["🍚","Rice 40g, soaked (or glutinous rice flour 3 tbsp)","白米 40克浸軟（或糯米粉3湯匙）"],["🍬","Rock sugar 60g","冰糖 60克"],["💧","Water 800ml","水 800毫升"]],"steps":[["Toast sesame seeds in a dry pan over low heat until fragrant (do not burn).","白鑊細火炒香黑芝麻（切勿炒燶）。"],["Blend sesame, soaked rice and water until completely smooth.","黑芝麻、米、水用攪拌機打至幼滑。"],["Strain into a pot; cook over medium-low heat, stirring constantly.","過篩入煲，中細火邊煮邊攪。"],["Add rock sugar; simmer until thick and glossy.","加冰糖煮至濃稠有光澤。"]],"tip":"Stir non-stop once it heats — it catches on the bottom easily. 加熱後要不停攪，好易黐底。"}];
+
+/* ============ constants ============ */
+const CATS = [
+  {key:'all', en:'All dishes', cn:'全部'},
+  {key:'breakfast', en:'Breakfast', cn:'早餐'},
+  {key:'lunch', en:'Lunch', cn:'午餐'},
+  {key:'soup', en:'Soup', cn:'湯水'},
+  {key:'appetizer', en:'Appetiser', cn:'前菜'},
+  {key:'main', en:'Main', cn:'主菜'},
+  {key:'dessert', en:'Sweet', cn:'糖水'},
+];
+const SIZES = [
+  {key:'s', name:'Small', base:14, sample:'.85em'},
+  {key:'m', name:'Medium', base:16, sample:'1.05em'},
+  {key:'l', name:'Large', base:18.5, sample:'1.35em'},
+  {key:'xl', name:'Largest', base:21, sample:'1.7em'},
+];
+const KEY = 'tinsCookbook.prefs.v1';
+const PREFS = ['favs','shopping','size','showCn','wake'];
+const GAS = typeof google!=='undefined' && google.script && google.script.run;
+
+const esc = t => String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const cssUrl = u => String(u||'').replace(/'/g,'%27').replace(/"/g,'%22').replace(/\)/g,'%29').replace(/\(/g,'%28');
+const ytId = u => { const m = String(u||'').match(/(?:v=|youtu\.be\/|shorts\/|embed\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : ''; };
+const blankDraft = () => ({en:'',cn:'',cat:'main',time:'',serves:'',ytid:'',img:'',addedBy:'',tip:'',source:'',ing:[['🧺','',''],['🧺','','']],steps:[['',''],['','']]});
+
+/* ============ state ============ */
+const BASE = RECIPES.map((r,i)=>Object.assign({}, r, {id:r.id||('r'+i)}));
+const S = {
+  view:'home', cat:'all', query:'', recipeId:null, step:0,
+  sheet:false, market:null, toast:'',
+  favs:[], shopping:[], size:'m', showCn:true, wake:true,
+  customs:[], overrides:{},
+  draft:null, editingId:null,
+  importing:false, importNote:'', importErr:false,
+  saving:false, loaded:!GAS,
+};
+let wakeLock=null, toastT=null;
+
+/* ============ persistence ============ */
+function loadLocal(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(KEY)||'{}');
+    PREFS.forEach(k=>{ if(saved[k]!==undefined) S[k]=saved[k]; });
+    if(!GAS){ /* standalone: recipes stay on this device */
+      if(saved.customs) S.customs=saved.customs;
+      if(saved.overrides) S.overrides=saved.overrides;
+    }
+  }catch(e){}
+}
+function persist(){
+  try{
+    const out={};
+    PREFS.forEach(k=>out[k]=S[k]);
+    if(!GAS){ out.customs=S.customs; out.overrides=S.overrides; }
+    localStorage.setItem(KEY, JSON.stringify(out));
+  }catch(e){}
+}
+
+/* ============ server sync ============ */
+function loadShared(){
+  if(!GAS) return;
+  google.script.run.withSuccessHandler(d=>{
+    S.customs=(d&&d.custom)||[]; S.overrides=(d&&d.overrides)||{}; S.loaded=true; render();
+  }).withFailureHandler(()=>{ S.loaded=true; flash("Couldn't reach the family cookbook — showing built-ins"); }).getData();
+}
+async function tzhClient(t){
+  if(!t) return '';
+  try{
+    const ac=new AbortController(); setTimeout(()=>ac.abort(),4000);
+    const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q='+encodeURIComponent(t),{signal:ac.signal});
+    const j=await r.json(); return (j[0]||[]).map(x=>x[0]).join('').trim();
+  }catch(e){ return ''; }
+}
+async function clientTranslate(o){
+  if(o.en && !o.cn) o.cn = await tzhClient(o.en);
+  for(const i of o.ing){ if(i[1] && !i[2]) i[2]=await tzhClient(i[1]); }
+  for(const s of o.steps){ if(s[0] && !s[1]) s[1]=await tzhClient(s[0]); }
+  if(o.tip && !/[一-鿿]/.test(o.tip)){ const z=await tzhClient(o.tip); if(z) o.tip=o.tip+' '+z; }
+  return o;
+}
+
+/* ============ merge & lookup ============ */
+function merged(){
+  return BASE
+    .filter(r=>S.overrides[r.id]!=='deleted')
+    .map(r=> (S.overrides[r.id] && S.overrides[r.id]!=='deleted') ? Object.assign({}, r, S.overrides[r.id]) : r)
+    .concat(S.customs);
+}
+function cur(){ return merged().find(r=>r.id===S.recipeId)||null; }
+function filtered(){
+  const q=S.query.trim().toLowerCase();
+  return merged().filter(r=>{
+    if(S.cat==='fav'){ if(!S.favs.includes(r.id)) return false; }
+    else if(S.cat!=='all' && r.cat!==S.cat) return false;
+    if(!q) return true;
+    const hay=[r.en,r.cn].concat((r.ing||[]).map(i=>i[1]+' '+i[2])).join(' ').toLowerCase();
+    return hay.indexOf(q)>=0;
+  });
+}
+const inList = name => S.shopping.some(s=>s.en===name);
+
+function flash(msg){
+  clearTimeout(toastT);
+  S.toast=msg; renderToast();
+  toastT=setTimeout(()=>{ S.toast=''; renderToast(); },1700);
+}
+
+/* ============ templates ============ */
+function bgStyle(img){ return img ? `background-image:url('${cssUrl(img)}')` : ''; }
+
+function homeHtml(){
+  const day = new Date().toLocaleDateString('en-GB',{weekday:'long'});
+  return `
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+    <div style="padding:1.1em 1.25em .7em;display:flex;justify-content:space-between;align-items:flex-end;gap:.75em">
+      <div style="min-width:0">
+        <div class="eyebrow" style="font-size:.66em;letter-spacing:.18em">${day} · What's cooking?</div>
+        <div style="font-size:1.42em;letter-spacing:-.02em;margin-top:.4em;line-height:1.1;white-space:nowrap">Tin's Family Cookbook</div>
+        <div style="font-size:.86em;font-style:italic;color:#87806F;margin-top:.35em">Made with love for our home kitchen</div>
+      </div>
+      <div data-act="goSettings" class="tc" style="width:2.4em;height:2.4em;border-radius:50%;background:#F7C948;color:#4A4A46;display:flex;align-items:center;justify-content:center;font-size:1em;flex:none;cursor:pointer">媽</div>
+    </div>
+    <div style="padding:0 1.25em 1em;display:flex;gap:.6em">
+      <div style="flex:1;display:flex;align-items:center;gap:.6em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:1.7em;padding:.72em 1.1em;min-width:0">
+        <span style="width:.85em;height:.85em;border:2px solid #A0947E;border-radius:50%;flex:none"></span>
+        <input data-in="query" value="${esc(S.query)}" placeholder="Search" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:1em;font-family:'Newsreader','Noto Serif TC',serif">
+      </div>
+      <div data-act="openSheet" class="ybtn" style="flex:none;display:flex;align-items:center;gap:.5em;border-radius:1.7em;padding:.72em 1.1em;font-size:1em;white-space:nowrap">${esc(catLabel())} <span style="font-size:.6em">▼</span></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em;-webkit-overflow-scrolling:touch"><div id="gridzone">${gridZoneHtml()}</div></div>
+  </div>`;
+}
+function catLabel(){
+  if(S.cat==='fav') return 'Saved';
+  const c=CATS.find(c=>c.key===S.cat); return c?c.en:'All';
+}
+function gridZoneHtml(){
+  const list=filtered();
+  const big=(SIZES.find(z=>z.key===S.size)||SIZES[1]).base>=18.5;
+  const label=`${catLabel()} · ${list.length} ${list.length===1?'dish':'dishes'}`;
+  const cards=list.map(r=>{
+    const favC=S.favs.includes(r.id)?'#E5734F':'#DCCFAF';
+    const body=`<div style="padding:.62em .75em .78em;min-width:0">
+        <div style="font-size:1.05em;line-height:1.2">${esc(r.en)}</div>
+        ${S.showCn?`<div class="tc" style="font-size:.87em;color:#7A6A52;margin-top:.12em">${esc(r.cn)}</div>`:''}
+        <div class="ins" style="font-size:.74em;color:#87806F;margin-top:.38em">${esc(r.time||'')}${r.serves?' · serves '+esc(r.serves):''}</div>
+      </div>`;
+    if(big) return `<div data-act="open:${r.id}" class="card" style="display:flex;align-items:stretch">
+        <div style="position:relative;flex:none;width:5.6em">
+          <div style="width:100%;height:100%;min-height:5.6em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:.4em">${body}
+          <span data-act="fav:${r.id}" style="margin-right:.6em;width:1.7em;height:1.7em;border-radius:50%;background:rgba(255,255,255,.93);display:flex;align-items:center;justify-content:center;font-size:.85em;color:${favC};flex:none">♥</span></div>
+      </div>`;
+    return `<div data-act="open:${r.id}" class="card" style="display:flex;flex-direction:column">
+      <div style="position:relative;flex:none">
+        <div style="width:100%;height:6.5em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
+        <span data-act="fav:${r.id}" style="position:absolute;top:.45em;right:.45em;width:1.7em;height:1.7em;border-radius:50%;background:rgba(255,255,255,.93);display:flex;align-items:center;justify-content:center;font-size:.85em;color:${favC}">♥</span>
+      </div>${body}
+    </div>`;
+  }).join('');
+  return `
+    <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.7em;position:sticky;top:0;background:#FAF2DD;padding-bottom:.3em;z-index:2">
+      <span class="eyebrow">${esc(label)}</span><span style="flex:1;height:1px;background:#EADFC2"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:${big?'1fr':'1fr 1fr'};gap:.85em">${cards}</div>
+    ${list.length===0?`<div style="text-align:center;padding:2.5em 1em;color:#87806F;font-size:1.05em">Nothing here yet.<br>Try another course, or tap <span style="color:#8A5A33">+</span> to add a dish.</div>`:''}`;
+}
+
+function recipeHtml(r){
+  const favC=S.favs.includes(r.id)?'#E5734F':'#FFFBEE';
+  const prov = r.addedBy ? 'By '+r.addedBy : 'Family recipe';
+  const ing=(r.ing||[]).map((i,ix)=>{
+    const on=inList(i[1]);
+    return `<div style="display:flex;align-items:center;gap:.7em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.7em .85em">
+      <span style="font-size:1.15em">${esc(i[0])}</span>
+      <div data-act="ingShow:${ix}" style="flex:1;cursor:pointer;min-width:0">
+        <div style="font-size:1em;line-height:1.25">${esc(i[1])}</div>
+        ${S.showCn?`<div class="tc" style="font-size:.88em;color:#7A6A52">${esc(i[2])}</div>`:''}
+      </div>
+      <span data-act="ingAdd:${ix}" class="ins" style="font-size:.66em;color:${on?'#6B7A45':'#8A5A33'};font-weight:700;border:1.5px solid #EADFC2;border-radius:.5em;padding:.45em .6em;cursor:pointer;white-space:nowrap">${on?'ON LIST':'+ LIST'}</span>
+    </div>`;
+  }).join('');
+  const steps=(r.steps||[]).map((s,i)=>`
+    <div style="display:flex;gap:.8em;padding:.8em 0;border-top:1px solid #EADFC2">
+      <span class="ins" style="font-size:.78em;font-weight:700;color:#8A5A33;padding-top:.25em">${String(i+1).padStart(2,'0')}</span>
+      <div style="min-width:0">
+        <div style="font-size:1.02em;line-height:1.45;text-wrap:pretty">${esc(s[0])}</div>
+        ${S.showCn?`<div class="tc" style="font-size:.9em;line-height:1.5;color:#7A6A52;margin-top:.15em">${esc(s[1])}</div>`:''}
+      </div>
+    </div>`).join('');
+  return `
+  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+    <div style="position:relative">
+      <div style="width:100%;height:13.5em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:5em;background:linear-gradient(rgba(0,0,0,.45),transparent);pointer-events:none"></div>
+      <div data-act="goHome" class="ins" style="position:absolute;top:.75em;left:.75em;display:flex;align-items:center;gap:.35em;height:2.8em;padding:0 1em 0 .8em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;font-size:.92em;font-weight:600;cursor:pointer">‹ Back</div>
+      <div style="position:absolute;top:.75em;right:.75em;display:flex;gap:.5em">
+        <span data-act="toggleFav" style="width:2.8em;height:2.8em;border-radius:50%;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:${favC};display:flex;align-items:center;justify-content:center;font-size:1em;cursor:pointer">♥</span>
+        <span data-act="editThis" class="ins" style="height:2.8em;padding:0 1em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;display:flex;align-items:center;justify-content:center;font-size:.92em;font-weight:600;cursor:pointer">Edit</span>
+      </div>
+    </div>
+    <div style="padding:1em 1.25em 2em">
+      <div style="font-size:1.6em;line-height:1.15;letter-spacing:-.02em">${esc(r.en)}</div>
+      ${S.showCn?`<div class="tc" style="font-size:1.12em;color:#7A6A52;margin-top:.15em">${esc(r.cn)}</div>`:''}
+      <div style="display:flex;gap:.45em;margin-top:.75em;flex-wrap:wrap">
+        <span class="chip">${esc(r.time||'—')}</span>
+        <span class="chip">Serves ${esc(r.serves||'—')}</span>
+        <span class="chip">${esc(prov)}</span>
+        ${r.lastCooked?`<span class="chip">Cooked ${esc(r.lastCooked)}</span>`:''}
+      </div>
+      <div class="ins" style="display:flex;gap:.6em;margin-top:.85em">
+        <div data-act="startCook" class="ybtn" style="flex:1;border-radius:.85em;padding:.95em;text-align:center;font-size:1em;font-weight:700">Start cooking</div>
+        ${r.ytid?`<a href="https://www.youtube.com/watch?v=${esc(r.ytid)}" target="_blank" rel="noopener" style="flex:none;padding:0 1em;background:#FFFBEE;border:1.5px solid #EADFC2;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;color:#6E6357">▶ Video</a>`:''}
+      </div>
+      <div class="rule" style="margin:1.4em 0 .7em"><span class="eyebrow">Ingredients</span><span class="line"></span><span data-act="addAll" style="font-size:.75em;font-weight:700;color:#6B7A45;cursor:pointer">+ Add all</span></div>
+      <div style="display:flex;flex-direction:column;gap:.55em">${ing}</div>
+      <div class="rule" style="margin:1.4em 0 .7em"><span class="eyebrow">Method</span><span class="line"></span></div>
+      <div style="display:flex;flex-direction:column">${steps}</div>
+      ${r.tip?`<div style="margin-top:1.2em;border-left:2px solid #8A5A33;padding:.2em 0 .2em .9em;font-style:italic;color:#6E6357;font-size:.98em;line-height:1.5">${esc(r.tip)}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function listHtml(){
+  const rows=S.shopping.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:.75em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.75em .85em">
+      <span data-act="shopToggle:${i}" style="width:1.5em;height:1.5em;border-radius:.4em;border:2px solid ${s.done?'#6B7A45':'#DCCFAF'};background:${s.done?'#6B7A45':'transparent'};color:#FFFBEE;display:flex;align-items:center;justify-content:center;font-size:.8em;flex:none;cursor:pointer">${s.done?'✓':''}</span>
+      <div data-act="shopShow:${i}" style="flex:1;min-width:0;cursor:pointer;opacity:${s.done?.45:1}">
+        <div style="font-size:1em;line-height:1.25">${esc(s.en)}</div>
+        <div class="tc" style="font-size:.88em;color:#7A6A52">${esc(s.cn)}</div>
+      </div>
+      <span data-act="shopRemove:${i}" style="color:#B0A28C;font-size:1.1em;padding:0 .3em;cursor:pointer">×</span>
+    </div>`).join('');
+  return `
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+    <div style="padding:1.1em 1.25em .8em">
+      <div style="font-size:1.72em;line-height:1.1">Shopping list</div>
+      <div class="tc" style="font-size:.9em;color:#7A6A52;margin-top:.15em">買餸清單 · ${S.shopping.length}</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em">
+      <div style="display:flex;flex-direction:column;gap:.55em">${rows}</div>
+      ${S.shopping.length===0?`<div style="text-align:center;padding:3em 1em;color:#87806F;font-size:1.05em;line-height:1.5">Nothing on the list.<br>Open a recipe and tap <span style="color:#6B7A45">+ Add all</span>.</div>`:''}
+      ${S.shopping.some(s=>s.done)?`<div data-act="clearBought" class="ins" style="margin-top:1.2em;text-align:center;font-size:.85em;font-weight:600;color:#8A5A33;cursor:pointer;padding:.8em">Clear bought items</div>`:''}
+    </div>
+  </div>`;
+}
+
+function settingsHtml(){
+  const sizes=SIZES.map(z=>`
+    <div data-act="pickSize:${z.key}" style="flex:1;border:${S.size===z.key?'2px solid #8A5A33':'1px solid #EADFC2'};background:#FFFBEE;border-radius:.75em;padding:.85em 0;text-align:center;cursor:pointer">
+      <div style="font-size:${z.sample};color:${S.size===z.key?'#8A5A33':'#7A6A52'};line-height:1">Aa</div>
+      <div class="ins" style="font-size:.68em;color:${S.size===z.key?'#8A5A33':'#7A6A52'};margin-top:.5em;font-weight:600">${z.name}</div>
+    </div>`).join('');
+  const tgl=(on)=>`background:${on?'#F7C948':'#E4DAC2'}"><span style="left:${on?'calc(100% - 1.58em)':'.18em'}"></span>`;
+  return `
+  <div style="flex:1;overflow-y:auto">
+    <div style="padding:1.1em 1.25em 2em">
+      <div style="font-size:1.72em;line-height:1.1">Reading comfort</div>
+      <div style="font-size:.95em;color:#7A6A52;margin-top:.2em">Only changes this phone. 只影響這部手機。</div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">Text size</div>
+      <div style="display:flex;gap:.5em">${sizes}</div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">Chinese 中文</div>
+      <div data-act="toggleCn" class="setrow">
+        <div><div style="font-size:1.02em">Show Chinese</div><div style="font-size:.85em;color:#7A6A52">Under the English, smaller</div></div>
+        <div class="tgl" style="${tgl(S.showCn)}</div>
+      </div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">While cooking</div>
+      <div data-act="toggleWake" class="setrow">
+        <div><div style="font-size:1.02em">Keep screen awake</div><div style="font-size:.85em;color:#7A6A52">Never sleeps in cook mode</div></div>
+        <div class="tgl" style="${tgl(S.wake)}</div>
+      </div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">Preview</div>
+      <div style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;display:flex;gap:.85em;align-items:center;padding:.7em">
+        <img src="https://i.ytimg.com/vi/dUq64G_HRyI/hqdefault.jpg" alt="" style="width:4.6em;height:4.6em;object-fit:cover;border-radius:.6em;flex:none">
+        <div style="min-width:0"><div style="font-size:1.3em;line-height:1.2">Clear Broth Beef Brisket</div>${S.showCn?`<div class="tc" style="font-size:1em;color:#7A6A52;margin-top:.1em">清湯牛腩</div>`:''}</div>
+      </div>
+      <div style="margin-top:1.6em;text-align:center;font-size:.9em;color:#A0947E;font-style:italic">Made with love for our home kitchen</div>
+    </div>
+  </div>`;
+}
+
+function editHtml(){
+  const d=S.draft;
+  const cats=CATS.filter(c=>c.key!=='all').map(c=>{
+    const on=d.cat===c.key;
+    return `<span data-act="pickDraftCat:${c.key}" style="padding:.5em .95em;border-radius:1.3em;background:${on?'#F7C948':'#FFFBEE'};color:#4A4A46;border:1px solid ${on?'#F7C948':'#EADFC2'};font-size:.95em;cursor:pointer">${c.en}</span>`;
+  }).join('');
+  const ingRows=d.ing.map((row,i)=>`
+    <div style="display:flex;gap:.45em;align-items:flex-start">
+      <input data-in="ing:${i}:0" value="${esc(row[0])}" style="width:2.6em;flex:none;text-align:center;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.75em 0;font-size:1em;outline:none">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.35em">
+        <input data-in="ing:${i}:1" value="${esc(row[1])}" placeholder="Ingredient &amp; amount" class="finput" style="padding:.7em .85em">
+        <input data-in="ing:${i}:2" value="${esc(row[2])}" placeholder="中文" class="finput tc" style="padding:.6em .85em;font-size:.9em;color:#7A6A52;font-family:'Noto Serif TC',serif">
+      </div>
+      <span data-act="remIng:${i}" style="flex:none;color:#B0A28C;font-size:1.2em;padding:.5em .25em;cursor:pointer">×</span>
+    </div>`).join('');
+  const stepRows=d.steps.map((row,i)=>`
+    <div style="display:flex;gap:.55em;align-items:flex-start">
+      <span class="ins" style="flex:none;font-size:.8em;font-weight:700;color:#8A5A33;padding-top:.9em">${String(i+1).padStart(2,'0')}</span>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.35em">
+        <textarea data-in="step:${i}:0" rows="2" placeholder="What to do" class="f2">${esc(row[0])}</textarea>
+        <textarea data-in="step:${i}:1" rows="2" placeholder="中文步驟" class="f2 tc" style="padding:.6em .85em;font-size:.9em;color:#7A6A52;font-family:'Noto Serif TC',serif;line-height:1.5">${esc(row[1])}</textarea>
+      </div>
+      <span data-act="remStep:${i}" style="flex:none;color:#B0A28C;font-size:1.2em;padding:.5em .25em;cursor:pointer">×</span>
+    </div>`).join('');
+  return `
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.75em;padding:1em 1.25em .8em;border-bottom:1px solid #EADFC2;flex:none">
+      <span data-act="cancelEdit" class="ins" style="font-size:.92em;font-weight:600;color:#87806F;cursor:pointer;padding:.3em .2em">Cancel</span>
+      <span style="font-size:1.05em">${S.editingId?'Edit dish':'New dish'}</span>
+      <span data-act="saveDraft" class="ins" style="font-size:.92em;font-weight:700;color:#8A5A33;cursor:pointer;padding:.3em .2em">${S.saving?'Saving…':'Save'}</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:1.1em 1.25em 2.5em">
+      <label style="display:block;position:relative;border-radius:1em;overflow:hidden;border:1.5px dashed #DCCFAF;background-color:#FFFBEE;${bgStyle(d.img)};background-size:cover;background-position:center;height:9em;cursor:pointer">
+        <input data-in="photo" type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+        <div class="ins" style="position:absolute;inset:auto 0 0 0;padding:.6em;text-align:center;background:rgba(74,74,70,.72);color:#FFFBEE;font-size:.82em;font-weight:600">${d.img?'Tap to use your own photo instead':'Add a photo of the dish'}</div>
+      </label>
+      <div class="eyebrow" style="margin:1.4em 0 .6em">Start from a link</div>
+      <div style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:.85em;padding:.85em">
+        <div style="font-size:.92em;color:#6E6357;line-height:1.45">Paste a recipe page or YouTube link — we'll fill in the ingredients and steps for you, in both languages.</div>
+        <input data-in="dsource" value="${esc(d.source)}" placeholder="https://…" class="ins" style="width:100%;background:#FAF2DD;border:1px solid #EADFC2;border-radius:.6em;padding:.7em .8em;font-size:.95em;outline:none;margin-top:.6em">
+        <div data-act="runImport" class="ins" style="margin-top:.55em;background:${S.importing?'#F5E9CC':'#F7C948'};color:${S.importing?'#8A5A33':'#4A4A46'};border:1px solid #8A5A33;border-radius:.6em;padding:.75em;text-align:center;font-size:.92em;font-weight:700;cursor:pointer">${S.importing?'Working…':'Fill in from this link'}</div>
+        ${S.importNote?`<div class="ins" id="importNote" style="margin-top:.55em;font-size:.85em;color:${S.importErr?'#8A5A33':'#6B7A45'};line-height:1.4">${esc(S.importNote)}</div>`:''}
+      </div>
+      <div class="eyebrow" style="margin:1.4em 0 .6em">The dish</div>
+      <input data-in="den" value="${esc(d.en)}" placeholder="Name in English" class="finput" style="font-size:1.05em;font-family:'Newsreader','Noto Serif TC',serif">
+      <input data-in="dcn" value="${esc(d.cn)}" placeholder="中文名（留空會自動翻譯）" class="finput tc" style="font-size:.95em;margin-top:.5em;color:#7A6A52;font-family:'Noto Serif TC',serif">
+      <div style="display:flex;flex-wrap:wrap;gap:.45em;margin-top:.7em">${cats}</div>
+      <div style="display:flex;gap:.5em;margin-top:.7em">
+        <input data-in="dtime" value="${esc(d.time)}" placeholder="30 min" class="finput" style="flex:1;min-width:0;width:auto">
+        <input data-in="dserves" value="${esc(d.serves)}" placeholder="Serves 4" class="finput" style="flex:1;min-width:0;width:auto">
+      </div>
+      <div style="display:flex;gap:.5em;margin-top:.5em">
+        <input data-in="daddedby" value="${esc(d.addedBy)}" placeholder="Added by" class="finput" style="flex:1;min-width:0;width:auto">
+        <input data-in="dyt" value="${esc(d.ytid)}" placeholder="YouTube link" class="finput" style="flex:1;min-width:0;width:auto">
+      </div>
+      <div class="rule" style="margin:1.5em 0 .6em"><span class="eyebrow">Ingredients</span><span class="line"></span></div>
+      <div style="display:flex;flex-direction:column;gap:.5em">${ingRows}</div>
+      <div data-act="addIng" class="addrow">+ Add ingredient</div>
+      <div class="rule" style="margin:1.5em 0 .6em"><span class="eyebrow">Method</span><span class="line"></span></div>
+      <div style="display:flex;flex-direction:column;gap:.6em">${stepRows}</div>
+      <div data-act="addStep" class="addrow">+ Add step</div>
+      <div class="eyebrow" style="margin:1.5em 0 .6em">Family note</div>
+      <textarea data-in="dtip" rows="3" placeholder="The little thing that makes it ours…" class="f2" style="font-style:italic;font-family:'Newsreader','Noto Serif TC',serif;line-height:1.5;padding:.8em .9em">${esc(d.tip)}</textarea>
+      <div data-act="saveDraft" class="ybtn ins" style="margin-top:1.4em;border-radius:.85em;padding:1em;text-align:center;font-size:1.05em;font-weight:700">${S.saving?'Saving…':(S.editingId?'Save changes':'Add to the cookbook')}</div>
+      ${S.editingId?`<div data-act="deleteDish" class="ins" style="margin-top:.7em;text-align:center;font-size:.88em;font-weight:600;color:#A0947E;cursor:pointer;padding:.7em">Delete this dish</div>`:''}
+    </div>
+  </div>`;
+}
+
+function cookHtml(r){
+  const steps=r.steps||[];
+  const idx=Math.min(S.step, Math.max(0, steps.length-1));
+  const bars=steps.map((s,i)=>`<span style="flex:1;height:.35em;background:${i<=idx?'#F7C948':'#5C5C55'};border-radius:.2em"></span>`).join('');
+  return `
+  <div style="position:absolute;inset:0;background:#35352F;color:#FFFBEE;z-index:25;display:flex;flex-direction:column;font-family:'Newsreader','Noto Serif TC',serif">
+    <div style="display:flex;align-items:center;gap:.7em;padding:1.2em 1.25em .9em">
+      <span data-act="endCook" class="ins" style="font-size:.8em;font-weight:700;color:#A9A69B;cursor:pointer;padding:.3em .5em .3em 0">✕ Exit</span>
+      <div style="flex:1;display:flex;gap:.3em">${bars}</div>
+      <span class="ins" style="font-size:.85em;font-weight:700">${idx+1}/${steps.length}</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:.5em 1.5em 0;display:flex;flex-direction:column">
+      <div class="ins" style="font-size:.8em;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#F7C948">${esc(r.en)}</div>
+      <div style="font-size:1.75em;font-weight:500;line-height:1.3;margin-top:.7em;text-wrap:pretty">${esc(steps[idx]?steps[idx][0]:'')}</div>
+      ${S.showCn?`<div class="tc" style="font-size:1.3em;line-height:1.55;color:#C9C6BB;margin-top:.7em">${esc(steps[idx]?steps[idx][1]:'')}</div>`:''}
+    </div>
+    <div style="display:flex;gap:.6em;padding:1em 1.25em 1.6em">
+      <div data-act="prevStep" style="flex:none;width:4.4em;border:2px solid #63635B;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:1.4em;cursor:pointer">‹</div>
+      <div data-act="nextStep" class="ybtn ins" style="flex:1;border-radius:.85em;padding:1.15em;text-align:center;font-size:1.1em;font-weight:700">${idx>=steps.length-1?'Done — 好味！':'Next step'}</div>
+    </div>
+  </div>`;
+}
+
+function tabsHtml(){
+  const c=(on)=>on?'#8A5A33':'#A0947E';
+  return `
+  <div class="ins" style="display:flex;justify-content:space-around;align-items:center;padding:.6em .5em 1.4em;background:#FFFBEE;border-top:1px solid #EADFC2;flex:none">
+    <div data-act="goHome" class="tabbtn" style="color:${c(S.view==='home'&&S.cat!=='fav')}"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:.35em"></span><span style="font-size:.68em;font-weight:600">Cook</span></div>
+    <div data-act="goFavs" class="tabbtn" style="color:${c(S.view==='home'&&S.cat==='fav')}"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:50%"></span><span style="font-size:.68em;font-weight:600">Saved</span></div>
+    <div data-act="goAdd" class="ybtn" style="width:3.1em;height:3.1em;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6em;font-weight:300;margin-top:-1.3em;box-shadow:0 6px 16px rgba(247,201,72,.55)">+</div>
+    <div data-act="goList" class="tabbtn" style="color:${c(S.view==='list')};position:relative"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:.25em"></span><span style="font-size:.68em;font-weight:600">Shopping</span>${S.shopping.length?`<span style="position:absolute;top:-.3em;right:.45em;background:#F7C948;color:#4A4A46;font-size:.6em;font-weight:700;border-radius:1em;padding:.1em .45em">${S.shopping.length}</span>`:''}</div>
+    <div data-act="goSettings" class="tabbtn" style="color:${c(S.view==='settings')}"><span style="width:1.35em;height:1.35em;border:2.5px solid currentColor;border-radius:50%"></span><span style="font-size:.68em;font-weight:600">Family</span></div>
+  </div>`;
+}
+
+function sheetHtml(){
+  const list=filtered();
+  const rows=CATS.map(c=>{
+    const n=c.key==='all'?merged().length:merged().filter(r=>r.cat===c.key).length;
+    const on=S.cat===c.key;
+    return `<div data-act="pickCat:${c.key}" class="crow">
+      <span style="font-size:1.12em;color:${on?'#8A5A33':'#4A4A46'}">${c.en} <span class="tc" style="font-size:.82em;color:${on?'#8A5A33':'#7A6A52'}">${c.cn}</span></span>
+      <span style="font-size:.9em;color:${on?'#8A5A33':'#4A4A46'}">${on?'✓':n}</span>
+    </div>`;
+  }).join('');
+  return `
+  <div data-act="closeSheet" id="scrim" style="position:absolute;inset:0;background:rgba(45,42,38,.45);z-index:20;display:flex;flex-direction:column;justify-content:flex-end;animation:fade .16s ease-out">
+    <div data-act="noop" style="background:#FAF2DD;border-radius:1.4em 1.4em 0 0;padding:.9em 1.35em 1.6em;max-height:88%;overflow-y:auto;animation:rise .22s cubic-bezier(.2,.8,.3,1)">
+      <div style="width:2.8em;height:.3em;border-radius:.2em;background:#E2D6BA;margin:0 auto 1em"></div>
+      <div class="eyebrow">Course</div>
+      ${rows}
+      <div data-act="closeSheet" class="ybtn ins" style="border-radius:.85em;padding:.95em;text-align:center;font-size:1.02em;font-weight:700;margin-top:1.2em">Show ${list.length} ${list.length===1?'dish':'dishes'}</div>
+    </div>
+  </div>`;
+}
+
+function marketHtml(){
+  const m=S.market;
+  return `
+  <div data-act="closeMarket" style="position:absolute;inset:0;background:#4A4A46;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5em;text-align:center;animation:fade .16s ease-out;cursor:pointer">
+    <div class="ins" style="font-size:.72em;letter-spacing:.18em;text-transform:uppercase;color:#F7C948;font-weight:700">Show this to the stall</div>
+    <div class="tc" style="font-size:3.1em;line-height:1.15;color:#FFFBEE;margin-top:.5em;text-wrap:balance">${esc(m.cn||m.en)}</div>
+    <div style="font-size:1.25em;color:#B0A28C;margin-top:.6em;text-wrap:pretty">${esc(m.en)}</div>
+    <a class="ins" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(m.cn||m.en)}" target="_blank" rel="noopener" style="margin-top:2em;border:1.5px solid #6E6E66;color:#FAF2DD;border-radius:.85em;padding:.8em 1.4em;font-size:.9em;font-weight:600">See photos of this</a>
+    <div class="ins" style="margin-top:1.6em;font-size:.85em;color:#A9A69B">Tap anywhere to close</div>
+  </div>`;
+}
+
+/* ============ render ============ */
+function render(){
+  const app=document.getElementById('app');
+  const size=SIZES.find(z=>z.key===S.size)||SIZES[1];
+  app.style.fontSize=size.base+'px';
+  const r=cur();
+  let main='';
+  if(S.view==='home') main=homeHtml();
+  else if((S.view==='recipe'||S.view==='cook') && r) main=recipeHtml(r);
+  else if(S.view==='list') main=listHtml();
+  else if(S.view==='settings') main=settingsHtml();
+  else if(S.view==='edit' && S.draft) main=editHtml();
+  else { S.view='home'; main=homeHtml(); }
+  const showTabs=['home','list','settings'].includes(S.view);
+  app.innerHTML = main
+    + (showTabs?tabsHtml():'')
+    + (S.sheet?sheetHtml():'')
+    + (S.view==='cook'&&r?cookHtml(r):'')
+    + (S.market?marketHtml():'')
+    + `<div id="toastbox"></div>`;
+  renderToast();
+}
+function renderToast(){
+  const box=document.getElementById('toastbox'); if(!box) return;
+  box.innerHTML=S.toast?`<div class="ins" style="position:absolute;left:50%;bottom:6.5em;transform:translateX(-50%);background:#4A4A46;color:#FAF2DD;padding:.7em 1.2em;border-radius:1.5em;font-size:.88em;z-index:40;white-space:nowrap;animation:fade .15s ease-out">${esc(S.toast)}</div>`:'';
+}
+function renderGridOnly(){
+  const z=document.getElementById('gridzone');
+  if(z) z.innerHTML=gridZoneHtml();
+}
+
+/* ============ draft & save ============ */
+function openAdd(){ S.view='edit'; S.editingId=null; S.draft=blankDraft(); S.importNote=''; S.importErr=false; S.importing=false; render(); }
+function openEdit(r){
+  S.view='edit'; S.editingId=r.id; S.importNote=''; S.importErr=false; S.importing=false;
+  S.draft={
+    source: r.ytid?'https://www.youtube.com/watch?v='+r.ytid:'',
+    en:r.en||'', cn:r.cn||'', cat:r.cat||'main', time:r.time||'', serves:r.serves||'',
+    ytid:r.ytid||'', img:r.img||'', addedBy:r.addedBy||'', tip:r.tip||'',
+    ing:(r.ing||[]).map(i=>[i[0],i[1],i[2]]).concat([['🧺','','']]),
+    steps:(r.steps||[]).map(s=>[s[0],s[1]]).concat([['','']]),
+  };
+  render();
+}
+function cleanDraft(){
+  const d=S.draft;
+  const ytid=ytId(d.ytid)||d.ytid.trim();
+  return {
+    en:d.en.trim()||d.cn.trim(), cn:d.cn.trim(), cat:d.cat,
+    time:d.time.trim(), serves:d.serves.trim(), ytid:ytid,
+    addedBy:d.addedBy.trim(), tip:d.tip.trim(),
+    img: d.img || (ytid?'https://i.ytimg.com/vi/'+ytid+'/hqdefault.jpg':''),
+    ing:d.ing.filter(i=>i[1].trim()||i[2].trim()).map(i=>[i[0]||'🧺',i[1].trim(),i[2].trim()]),
+    steps:d.steps.filter(s=>s[0].trim()||s[1].trim()).map(s=>[s[0].trim(),s[1].trim()]),
+    updated:new Date().toISOString().slice(0,10),
+  };
+}
+function upsert(saved){
+  if(saved.custom || /^[cu]/.test(String(saved.id))){
+    const i=S.customs.findIndex(x=>x.id===saved.id);
+    if(i>=0) S.customs[i]=saved; else S.customs.push(saved);
+  }else{
+    S.overrides[saved.id]=saved;
+  }
+}
+async function saveDraft(){
+  if(S.saving) return;
+  const d=S.draft; if(!d) return;
+  if(!d.en.trim() && !d.cn.trim()){ flash('Give the dish a name first'); return; }
+  const clean=cleanDraft();
+  const id=S.editingId;
+  if(id) clean.id=id;
+  // keep existing lastCooked when editing
+  if(id){ const prev=merged().find(x=>x.id===id); if(prev && prev.lastCooked) clean.lastCooked=prev.lastCooked; }
+  S.saving=true; render();
+  if(GAS){
+    google.script.run.withSuccessHandler(saved=>{
+      S.saving=false; upsert(saved);
+      S.view='recipe'; S.recipeId=saved.id; S.step=0; S.draft=null; S.editingId=null;
+      render(); flash(id?'Saved':'Added to the cookbook');
+    }).withFailureHandler(()=>{
+      S.saving=false; render(); flash("Couldn't save — check the connection and try again");
+    }).saveRecipe(clean);
+  }else{
+    flash('Translating…');
+    try{ await clientTranslate(clean); }catch(e){}
+    let newId=id;
+    if(!id){ newId='c'+Date.now(); clean.id=newId; clean.custom=true; S.customs.push(clean); }
+    else if(S.customs.some(c=>c.id===id)){ clean.custom=true; S.customs=S.customs.map(c=>c.id===id?clean:c); }
+    else S.overrides[id]=clean;
+    persist();
+    S.saving=false; S.view='recipe'; S.recipeId=newId; S.step=0; S.draft=null; S.editingId=null;
+    render(); flash(id?'Saved':'Added to the cookbook');
+  }
+}
+function deleteDish(){
+  const id=S.editingId; if(!id) return;
+  if(!confirm('Remove this dish from the family cookbook? 確定移除呢道菜？')) return;
+  const done=()=>{ S.view='home'; S.recipeId=null; S.draft=null; S.editingId=null; render(); flash('Removed'); };
+  if(GAS){
+    google.script.run.withSuccessHandler(()=>{
+      if(/^[cu]/.test(id)) S.customs=S.customs.filter(c=>c.id!==id); else S.overrides[id]='deleted';
+      done();
+    }).withFailureHandler(()=>flash("Couldn't remove — try again")).deleteRecipe(id);
+  }else{
+    if(S.customs.some(c=>c.id===id)) S.customs=S.customs.filter(c=>c.id!==id);
+    else S.overrides[id]='deleted';
+    persist(); done();
+  }
+}
+function stampCooked(r){
+  const today=new Date().toISOString().slice(0,10);
+  const full=Object.assign({}, r, {lastCooked:today});
+  upsert(full);
+  if(GAS){ google.script.run.saveRecipe(full); } else { persist(); }
+}
+
+/* ============ link import (task 3: extractRecipe, NOT window.claude.complete) ============ */
+function setImportNote(msg, err){
+  S.importNote=msg; S.importErr=!!err;
+  const el=document.getElementById('importNote');
+  render();
+}
+function runImport(){
+  const d=S.draft; if(!d) return;
+  const url=(d.source||'').trim();
+  if(!url){ setImportNote('Paste a link first.', true); return; }
+  if(S.importing) return;
+  S.importing=true; S.importErr=false; S.importNote='Reading the page… this takes a few seconds.'; render();
+  if(!GAS){
+    S.importing=false;
+    setImportNote('Automatic filling works in the family web app — open the shared link to use it. 自動填寫請用家庭網頁版。', true);
+    return;
+  }
+  google.script.run.withSuccessHandler(out=>applyImport(out,url))
+    .withFailureHandler(()=>{ S.importing=false; setImportNote("That didn't work. Try again, or fill it in by hand below.", true); })
+    .extractRecipe(url);
+}
+function applyImport(out, url){
+  S.importing=false;
+  const d=S.draft; if(!d) return;
+  const vid=ytId(url);
+  if(!out || out.error){
+    if(out && out.img && !d.img) d.img=out.img;
+    const map={
+      'not-configured':"Automatic filling isn't set up yet — add the Anthropic key in Apps Script → Script Properties. Type the recipe in below for now.",
+      'unreadable': out&&out.img ? "Got the photo, but couldn't read the recipe — some sites block it. Type it in below." : "Couldn't open that link — some sites block it. Try another, or type it in below.",
+      'no-recipe':'No recipe found on that page.',
+      'api':'The writing service had a problem. Try again in a minute.',
+      'parse':"That didn't work. Try again, or fill it in by hand below.",
+    };
+    setImportNote(map[(out&&out.error)||'parse']||map.parse, true);
+    return;
+  }
+  const cats=['breakfast','lunch','soup','appetizer','main','dessert'];
+  const ing=(out.ing||[]).filter(x=>x&&(x[1]||x[2])).map(x=>[x[0]||'🧺',x[1]||'',x[2]||'']);
+  const steps=(out.steps||[]).filter(x=>x&&(x[0]||x[1])).map(x=>[x[0]||'',x[1]||'']);
+  Object.assign(d,{
+    en:out.en||d.en, cn:out.cn||d.cn,
+    cat:cats.indexOf(out.cat)>=0?out.cat:d.cat,
+    time:out.time||d.time, serves:String(out.serves||d.serves),
+    tip:out.tip||d.tip,
+    ytid:vid||out.ytid||d.ytid,
+    img:d.img||out.img||'',
+    ing:ing.length?ing.concat([['🧺','','']]):d.ing,
+    steps:steps.length?steps.concat([['','']]):d.steps,
+  });
+  setImportNote('Filled in '+ing.length+' ingredients and '+steps.length+' steps — please check before saving.', false);
+}
+
+/* ============ photo ============ */
+function pickPhoto(e){
+  const file=e.target.files&&e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=900, sc=Math.min(1, max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas');
+      cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      S.draft.img=cv.toDataURL('image/jpeg',.75);
+      render();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============ wake lock ============ */
+function acquireWake(){
+  if(!S.wake || !navigator.wakeLock) return;
+  navigator.wakeLock.request('screen').then(l=>{ wakeLock=l; }).catch(()=>{});
+}
+function releaseWake(){ if(wakeLock){ try{ wakeLock.release(); }catch(e){} wakeLock=null; } }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && S.view==='cook') acquireWake(); });
+
+/* ============ actions ============ */
+const ACT={
+  noop:(a,b,e)=>{ e.stopPropagation(); },
+  goHome:()=>{ if(S.view==='home'&&S.cat==='fav') S.cat='all'; S.view='home'; render(); },
+  goFavs:()=>{ S.view='home'; S.cat='fav'; S.query=''; render(); },
+  goList:()=>{ S.view='list'; render(); },
+  goSettings:()=>{ S.view='settings'; render(); },
+  goAdd:()=>openAdd(),
+  openSheet:()=>{ S.sheet=true; render(); },
+  closeSheet:(a,b,e)=>{ e.stopPropagation(); S.sheet=false; render(); },
+  pickCat:(k,b,e)=>{ e.stopPropagation(); S.cat=k; S.sheet=false; render(); },
+  open:id=>{ S.view='recipe'; S.recipeId=id; S.step=0; render(); },
+  fav:(id,b,e)=>{ e.stopPropagation(); S.favs=S.favs.includes(id)?S.favs.filter(x=>x!==id):S.favs.concat([id]); persist(); S.view==='home'?renderGridOnly():render(); },
+  toggleFav:()=>{ const r=cur(); if(!r) return; ACT.fav(r.id,null,{stopPropagation:()=>{}}); render(); },
+  editThis:()=>{ const r=cur(); if(r) openEdit(r); },
+  startCook:()=>{ S.view='cook'; S.step=0; render(); acquireWake(); },
+  endCook:()=>{ S.view='recipe'; render(); releaseWake(); },
+  prevStep:()=>{ S.step=Math.max(0,S.step-1); render(); },
+  nextStep:()=>{
+    const r=cur(); if(!r) return;
+    const n=(r.steps||[]).length;
+    if(S.step>=n-1){ stampCooked(r); S.view='recipe'; render(); releaseWake(); flash('Marked as cooked today'); }
+    else { S.step++; render(); }
+  },
+  addAll:()=>{
+    const r=cur(); if(!r) return;
+    const add=(r.ing||[]).filter(i=>!inList(i[1])).map(i=>({en:i[1],cn:i[2],done:false}));
+    if(!add.length){ flash('Already on the list'); return; }
+    S.shopping=S.shopping.concat(add); persist(); render();
+    flash(add.length+' added to shopping list');
+  },
+  ingShow:ix=>{ const r=cur(); const i=r&&r.ing[ix]; if(i){ S.market={en:i[1],cn:i[2]}; render(); } },
+  ingAdd:(ix,b,e)=>{
+    e.stopPropagation();
+    const r=cur(); const i=r&&r.ing[ix]; if(!i) return;
+    if(inList(i[1])){ flash('Already on the list'); return; }
+    S.shopping=S.shopping.concat([{en:i[1],cn:i[2],done:false}]); persist(); render();
+    flash('Added to shopping list');
+  },
+  shopToggle:i=>{ S.shopping[i].done=!S.shopping[i].done; persist(); render(); },
+  shopRemove:i=>{ S.shopping.splice(i,1); persist(); render(); },
+  shopShow:i=>{ const s=S.shopping[i]; if(s){ S.market={en:s.en,cn:s.cn}; render(); } },
+  clearBought:()=>{ S.shopping=S.shopping.filter(s=>!s.done); persist(); render(); },
+  closeMarket:()=>{ S.market=null; render(); },
+  pickSize:k=>{ S.size=k; persist(); render(); },
+  toggleCn:()=>{ S.showCn=!S.showCn; persist(); render(); },
+  toggleWake:()=>{ S.wake=!S.wake; persist(); render(); },
+  cancelEdit:()=>{ S.view=S.editingId?'recipe':'home'; S.draft=null; S.editingId=null; render(); },
+  saveDraft:()=>saveDraft(),
+  deleteDish:()=>deleteDish(),
+  runImport:()=>runImport(),
+  addIng:()=>{ S.draft.ing.push(['🧺','','']); render(); },
+  addStep:()=>{ S.draft.steps.push(['','']); render(); },
+  remIng:i=>{ S.draft.ing.splice(i,1); if(!S.draft.ing.length) S.draft.ing.push(['🧺','','']); render(); },
+  remStep:i=>{ S.draft.steps.splice(i,1); if(!S.draft.steps.length) S.draft.steps.push(['','']); render(); },
+};
+
+const app=document.getElementById('app');
+app.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return;
+  const parts=el.dataset.act.split(':');
+  const fn=ACT[parts[0]];
+  if(fn) fn(parts[1], parts[2], e);
+});
+app.addEventListener('input',e=>{
+  const k=e.target.dataset.in; if(!k) return;
+  const v=e.target.value;
+  if(k==='query'){ S.query=v; renderGridOnly(); return; }
+  const d=S.draft; if(!d) return;
+  if(k==='den') d.en=v;
+  else if(k==='dcn') d.cn=v;
+  else if(k==='dtime') d.time=v;
+  else if(k==='dserves') d.serves=v;
+  else if(k==='daddedby') d.addedBy=v;
+  else if(k==='dyt') d.ytid=v;
+  else if(k==='dtip') d.tip=v;
+  else if(k==='dsource') d.source=v;
+  else{
+    const p=k.split(':');
+    if(p[0]==='ing') d.ing[+p[1]][+p[2]]=v;
+    else if(p[0]==='step') d.steps[+p[1]][+p[2]]=v;
+  }
+});
+app.addEventListener('change',e=>{ if(e.target.dataset.in==='photo') pickPhoto(e); });
+
+/* ============ boot ============ */
+loadLocal();
+render();
+loadShared();
+</script>
+</body>
+</html>
