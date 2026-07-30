@@ -32,8 +32,9 @@
  *    it was last touched at. A phone says "I know up to revision N" and gets
  *    back only what changed since. Opening the app is then almost free.
  *  - Courses are editable by the family (no longer fixed in the app).
- *  - Today's menu is stored here too, so whatever Mum picks shows up on the
- *    helper's phone straight away.
+ *  - Menus are stored here too, one per shelf per day, so whatever is picked
+ *    shows up on the helper's phone straight away, and VT, MT and CT — who do
+ *    not share a kitchen — each keep their own plan.
  *  Run migratePhotos() ONCE from the editor after installing this.
  *
  * Nothing to configure. No keys, no billing, no region restrictions.
@@ -89,6 +90,7 @@ function doPost(e) {
     var payload = body.payload;
     if (action === 'get') out = { ok: true, data: getData(payload) };
     else if (action === 'photos') out = { ok: true, data: getPhotos(payload) };
+    else if (action === 'rephoto') out = { ok: true, data: replacePhoto(payload) };
     else if (action === 'menu') out = { ok: true, data: saveMenu(payload) };
     else if (action === 'courses') out = { ok: true, data: saveCourses(payload) };
     else if (action === 'save') out = { ok: true, data: saveRecipe(payload) };
@@ -330,6 +332,26 @@ function getPhotos(list) {
   return out;
 }
 
+/**
+ * Swaps a stored photo for a lighter version of the same picture.
+ * The file keeps its name, so no recipe has to change and nobody's cookbook is
+ * rewritten — only the photo itself gets smaller. Used by "Make stored photos
+ * smaller" in the app's Settings, for pictures saved before the app began
+ * shrinking them on the way in. A photo is never replaced by a bigger one.
+ */
+function replacePhoto(payload) {
+  var h = cleanHash_(payload && payload.h);
+  var data = String((payload && payload.data) || '');
+  if (!h || data.indexOf('data:image') !== 0) throw new Error('That is not a photo.');
+  var it = photoFolder_().getFilesByName(h + '.txt');
+  if (!it.hasNext()) return 0;
+  var f = it.next();
+  var was = f.getBlob().getDataAsString().length;
+  if (data.length >= was) return 0;
+  f.setContent(data);
+  return was - data.length;
+}
+
 /** Replaces any inline photo on a recipe with a reference. Safe to re-run. */
 function externalisePhotos_(r) {
   if (!r || typeof r !== 'object') return r;
@@ -352,8 +374,20 @@ function ensureRev_(d) {
   if (!d.tombs) { d.tombs = []; changed = true; }
   if (!d.menus) {
     d.menus = {};
-    if (d.menu && d.menu.date) d.menus[d.menu.date] = d.menu;   // carry the old one over
+    if (d.menu && d.menu.date) {          // carry an older single menu over to VT
+      d.menu.book = 'VT';
+      d.menus['VT|' + d.menu.date] = d.menu;
+    }
     changed = true;
+  }
+  // Menus saved before shelves existed sit under a bare date; move them to VT.
+  for (var mk in d.menus) {
+    if (mk.indexOf('|') < 0) {
+      d.menus['VT|' + mk] = d.menus[mk];
+      d.menus['VT|' + mk].book = 'VT';
+      delete d.menus[mk];
+      changed = true;
+    }
   }
   if (!d.courses || !d.courses.length) { d.courses = DEFAULT_COURSES.slice(); changed = true; }
   if (d.rev == null) {
@@ -486,11 +520,22 @@ function todayHK_() {
   return Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy-MM-dd');
 }
 
+/**
+ * A menu belongs to a shelf as well as a day: VT, MT and CT do not live in the
+ * same kitchen, so each keeps its own plan. The key is "SHELF|YYYY-MM-DD".
+ */
+function menuKey_(book, date) { return cleanBook_(book) + '|' + date; }
+function cleanBook_(b) {
+  var v = String(b || '').replace(/[^A-Za-z0-9_-]/g, '').toUpperCase().slice(0, 8);
+  return v || 'VT';
+}
+function menuDate_(key) { return String(key).split('|').pop(); }
+
 /** Days that are still to come (plus today). Yesterday's plans are dropped. */
 function futureMenus_(d) {
   var out = {}, today = todayHK_();
   var all = d.menus || {};
-  for (var k in all) if (k >= today) out[k] = all[k];
+  for (var k in all) if (menuDate_(k) >= today) out[k] = all[k];
   return out;
 }
 
@@ -510,14 +555,17 @@ function saveMenu(m) {
 
     var date = String((m && m.date) || '').slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('A menu needs a date.');
+    var book = cleanBook_(m && m.book);
+    var key = menuKey_(book, date);
 
     var rev = bumpRev_(d);
     var items = ((m && m.items) || []).slice(0, 40).map(String);
     if (!items.length) {
-      delete d.menus[date];
+      delete d.menus[key];
     } else {
-      d.menus[date] = {
+      d.menus[key] = {
         date: date,
+        book: book,
         items: items,
         note: String((m && m.note) || '').slice(0, 500),
         occasion: String((m && m.occasion) || '').slice(0, 80),
@@ -529,11 +577,11 @@ function saveMenu(m) {
 
     // Keep the file tidy: yesterday and earlier are no longer useful.
     var today = todayHK_();
-    for (var k in d.menus) if (k < today) delete d.menus[k];
+    for (var k in d.menus) if (menuDate_(k) < today) delete d.menus[k];
 
-    d.menu = d.menus[today] || null;   // what today's kitchen is cooking
+    d.menu = null;   // superseded by d.menus, which is per shelf and per day
     writeData_(d);
-    return { menus: futureMenus_(d), saved: d.menus[date] || null, rev: rev };
+    return { menus: futureMenus_(d), saved: d.menus[key] || null, rev: rev };
   } finally {
     lock.releaseLock();
   }
