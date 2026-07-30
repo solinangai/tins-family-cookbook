@@ -191,7 +191,7 @@ const S = {
   sheet:false, market:null, toast:'',
   favs:[], shopping:[], size:'m', showCn:true, wake:true, book:DEFAULT_BOOK,
   customs:[], overrides:{}, rev:0,
-  menus:{}, menuDate:'', menuBook:'', menuPick:'',
+  menus:{}, menuDate:'', menuBook:'', menuPick:'', pickBook:'', pickCat:'',
   draft:null, editingId:null, newCourse:null,
   importing:false, importNote:'', importErr:false,
   saving:false, loaded:!GAS, askWho:false, syncing:false, tidy:null,
@@ -848,13 +848,6 @@ function settingsHtml(){
       <div data-act="newCourse" class="addrow">+ Add a course${zh(' 加分類')}</div>
       <div style="font-size:.82em;color:#87806F;margin-top:.4em;line-height:1.45">Shared with everyone. Existing courses stay as they are.${zh(' 全家共用。')}</div>
 
-      <div class="eyebrow" style="margin:1.5em 0 .7em">Photos${zh(' 相片')}</div>
-      <div data-act="shrinkStored" class="setrow">
-        <div><div style="font-size:1.02em">${S.tidy?`Tidying ${S.tidy.done} of ${S.tidy.total}…`:'Make stored photos smaller'}</div>
-        <div style="font-size:.85em;color:#7A6A52">${S.tidy?(S.tidy.saved?Math.round(S.tidy.saved/1400)+' KB saved so far':'Working through them…'):'Speeds up the first look on every phone. Nothing is lost.'}${S.tidy?'':zh(' 令相片載入更快')}</div></div>
-        <span class="ins" style="font-size:.85em;font-weight:700;color:#8A5A33">${S.tidy?'…':'Start'}</span>
-      </div>
-
       <div class="eyebrow" style="margin:1.5em 0 .7em">Preview</div>
       <div style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;display:flex;gap:.85em;align-items:center;padding:.7em">
         <img src="https://i.ytimg.com/vi/dUq64G_HRyI/hqdefault.jpg" alt="" style="width:4.6em;height:4.6em;object-fit:cover;border-radius:.6em;flex:none">
@@ -1033,8 +1026,26 @@ function menuHtml(){
   const m = menuFor(book, key);
   const chosen = menuItems(book, key);
   const q = S.menuPick.trim().toLowerCase();
-  /* Dishes come from every shelf — only the plan belongs to one. */
-  const pool = merged().filter(r=>!onMenu(r.id, book, key) && matches(r,q));
+  /* Dishes come from every shelf — only the plan belongs to one. The two rows
+     of chips below just narrow what is on offer while you are choosing. */
+  const openList = merged().filter(r=>!onMenu(r.id, book, key) && matches(r,q));
+  const pool = openList.filter(r=>
+    (!S.pickBook || bookOf(r)===S.pickBook) &&
+    (!S.pickCat  || r.cat===S.pickCat));
+
+  const chip = (act, val, label, count, on) =>
+    `<span data-act="${act}:${val}" class="daychip" style="background:${on?'#F7C948':'#FFFBEE'};border-color:${on?'#F7C948':'#EADFC2'};color:${on?'#4A4A46':'#7A6A52'};font-weight:${on?700:600}">${esc(label)}${count===null?'':`<span style="opacity:.6;margin-left:.3em">${count}</span>`}</span>`;
+
+  const shelfFilter = [chip('pickPoolBook','', 'All shelves', openList.length, !S.pickBook)]
+    .concat(BOOKS.map(b=>chip('pickPoolBook', b.key, b.en,
+      openList.filter(r=>bookOf(r)===b.key).length, S.pickBook===b.key))).join('');
+
+  const inShelf = openList.filter(r=>!S.pickBook || bookOf(r)===S.pickBook);
+  const courseFilter = [chip('pickPoolCat','', 'All courses', inShelf.length, !S.pickCat)]
+    .concat(COURSES.map(c=>{
+      const n = inShelf.filter(r=>r.cat===c.key).length;
+      return n ? chip('pickPoolCat', c.key, c.en, n, S.pickCat===c.key) : '';
+    })).join('');
 
   const bookChips = BOOKS.map(b=>{
     const on = b.key===book;
@@ -1120,10 +1131,12 @@ function menuHtml(){
       <div data-act="menuClear" class="ins" style="margin-top:.6em;text-align:center;font-size:.85em;font-weight:600;color:#A0947E;cursor:pointer;padding:.6em">Clear this day's menu</div>`:''}
 
       <div class="rule" style="margin:1.6em 0 .5em"><span class="eyebrow">Add a dish</span><span class="line"></span></div>
-      <input data-in="menupick" value="${esc(S.menuPick)}" placeholder="Search all shelves${zh(' 搜尋')}" class="finput">
-      <div class="ins" style="font-size:.75em;color:#87806F;margin-top:.5em">${pool.length} ${pool.length===1?'dish':'dishes'} to choose from, from every shelf${zh(' 全部菜式')}</div>
+      <input data-in="menupick" value="${esc(S.menuPick)}" placeholder="Search every dish${zh(' 搜尋')}" class="finput">
+      <div class="ins" style="display:flex;gap:.4em;overflow-x:auto;margin-top:.55em;padding-bottom:.25em;-webkit-overflow-scrolling:touch">${shelfFilter}</div>
+      <div class="ins" style="display:flex;gap:.4em;overflow-x:auto;margin-top:.35em;padding-bottom:.25em;-webkit-overflow-scrolling:touch">${courseFilter}</div>
+      <div class="ins" style="font-size:.75em;color:#87806F;margin-top:.55em">${pool.length} ${pool.length===1?'dish':'dishes'} to choose from${(S.pickBook||S.pickCat)?` · <span data-act="clearPoolFilters" style="color:#8A5A33;font-weight:700;cursor:pointer">show all</span>`:zh(' 全部菜式')}</div>
       <div>${poolRows}</div>
-      ${pool.length===0?`<div style="text-align:center;padding:1.5em;color:#87806F;font-size:.95em">Nothing else matches.</div>`:''}
+      ${pool.length===0?`<div style="text-align:center;padding:1.5em;color:#87806F;font-size:.95em">Nothing matches those filters.</div>`:''}
     </div>
   </div>`;
 }
@@ -1514,8 +1527,11 @@ function applyImport(out, url){
    still comes out too heavy the quality and then the size step down until it
    fits. Budgets are in characters of the encoded photo, which is about a third
    larger than the file itself.                                               */
-const COVER_SIDE = 800, COVER_BUDGET = 150000;   /* ~110 KB */
-const STEP_SIDE  = 520, STEP_BUDGET  =  85000;   /* ~62 KB  */
+/* The cookbook is read in a column about 440 points wide, so these are already
+   generous for a sharp screen — and the weight is what decides how quickly a
+   picture appears on a phone away from wifi. */
+const COVER_SIDE = 700, COVER_BUDGET = 60000;    /* ~43 KB */
+const STEP_SIDE  = 480, STEP_BUDGET  = 28000;    /* ~20 KB */
 
 function shrinkImage(src, maxSide, budget){
   return new Promise(function(resolve, reject){
@@ -1554,10 +1570,13 @@ function shrinkPhoto(file, maxSide, budget){
   });
 }
 
-/* Photos saved before the app started shrinking them are still full size, and
-   they are the slow ones to load. This walks through them, makes each smaller
-   and puts it back under the same name, so no recipe changes and everyone's
-   cookbook is left exactly as it was. */
+/* Housekeeping, not a family feature: photos saved before the app began
+   shrinking them on the way in are still full size, and they are the slow ones
+   to load. This walks through them, makes each smaller and puts it back under
+   the same name, so no recipe changes and everyone's cookbook is left exactly
+   as it was. It was run once after the change; it is kept here so it can be
+   run again from the browser console if a batch of large photos ever appears.
+   Deliberately not on any screen — nobody should have to maintain a cookbook. */
 async function shrinkStored(){
   if(!SHARED){ flash('Only in the family app'); return; }
   if(S.tidy) return;
@@ -1683,10 +1702,13 @@ const ACT={
   pickDraftCat:k=>{ if(S.draft){ S.draft.cat=k; render(); } },
   pickDraftBook:k=>{ if(S.draft){ S.draft.book=k; render(); } },
   pickBook:k=>{ S.book=k; S.cat='all'; persist(); render(); },
-  goMenu:()=>{ S.view='menu'; S.menuBook=S.book; S.menuDate=S.menuDate||dayKey(0); S.menuPick=''; render(); },
-  goMenuOn:k=>{ S.view='menu'; S.menuBook=S.book; S.menuDate=k; S.menuPick=''; render(); },
+  goMenu:()=>{ S.view='menu'; S.menuBook=S.book; S.menuDate=S.menuDate||dayKey(0); S.menuPick=''; S.pickBook=''; S.pickCat=''; render(); },
+  goMenuOn:k=>{ S.view='menu'; S.menuBook=S.book; S.menuDate=k; S.menuPick=''; S.pickBook=''; S.pickCat=''; render(); },
   pickMenuDay:k=>{ S.menuDate=k; S.menuPick=''; render(); },
   pickMenuBook:b=>{ S.menuBook=b; S.menuPick=''; render(); },
+  pickPoolBook:b=>{ S.pickBook=b||''; if(S.pickCat && !merged().some(r=>(!S.pickBook||bookOf(r)===S.pickBook)&&r.cat===S.pickCat)) S.pickCat=''; render(); },
+  pickPoolCat:k=>{ S.pickCat=k||''; render(); },
+  clearPoolFilters:()=>{ S.pickBook=''; S.pickCat=''; render(); },
   menuOn:id=>{ const b=S.menuBook||S.book, k=S.menuDate||dayKey(0); const ids=menuIds(b,k); if(ids.indexOf(id)<0) ids.push(id); setMenu(b, k, ids); render(); },
   menuOff:id=>{ const b=S.menuBook||S.book, k=S.menuDate||dayKey(0); setMenu(b, k, menuIds(b,k).filter(x=>x!==id)); render(); },
   menuClear:()=>{ const b=S.menuBook||S.book, k=S.menuDate||dayKey(0); setMenu(b, k, []); render(); flash('Menu cleared' + zh(' 已清除')); },
@@ -1704,7 +1726,6 @@ const ACT={
     S.shopping=S.shopping.concat(add); persist(); S.view='list'; render();
     flash(add.length+' added to shopping list');
   },
-  shrinkStored:()=>shrinkStored(),
   newCourse:()=>{ S.newCourse={en:'',cn:''}; render(); },
   closeCourse:()=>{ S.newCourse=null; render(); },
   saveCourse:()=>saveCourse(),
