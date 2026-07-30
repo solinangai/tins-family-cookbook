@@ -41,8 +41,13 @@ input,button,textarea{font:inherit;color:inherit}
 /* The bottom bar is chrome, not reading matter: it keeps its own fixed sizes so
    that turning the text up for tired eyes cannot squash it or bend the + into
    an oval. Everything here is in px on purpose. */
+/* The space below the labels is the phone's own — the home-indicator strip on
+   an iPhone, nothing on a laptop. Adding a fixed 20px on top of it left a band
+   of empty cream on newer phones, so the bar now takes whichever is larger and
+   no more. */
   #tabbar{position:relative;z-index:60;font-size:15px;display:flex;align-items:center;justify-content:space-around;
-          padding:9px 8px calc(20px + env(safe-area-inset-bottom,0px));background:#FFFBEE;border-top:1px solid #EADFC2;flex:none}
+          padding:8px 8px max(8px, env(safe-area-inset-bottom, 0px));
+          background:#FFFBEE;border-top:1px solid #EADFC2;flex:none}
   .tabbtn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;width:60px;flex:none}
   .tabbtn svg{width:23px;height:23px;display:block;flex:none}
   .tabbtn b{font-size:10.5px;font-weight:600;letter-spacing:.01em;line-height:1;white-space:nowrap}
@@ -56,7 +61,54 @@ input,button,textarea{font:inherit;color:inherit}
   .stepimg{width:100%;max-width:100%;border-radius:.7em;margin-top:.5em;display:block;background:#F0E6CF}
   .cookimg{width:100%;max-height:38vh;object-fit:cover;border-radius:.9em;margin-top:.9em;background:#2b2b26}
   .stepthumb{width:4.2em;height:4.2em;object-fit:cover;border-radius:.5em;flex:none;background:#F0E6CF}
-  #who{position:fixed;inset:0;background:rgba(45,42,38,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:1.2em}
+/* ============ one cookbook, three shapes ============
+
+   The cookbook is designed for a phone held in one hand over a hot pan, and
+   that stays the reference. A tablet simply gets a wider page and more dishes
+   in view. A laptop gets the same page with the five buttons stood up along
+   the left, where a pointer expects them, instead of a thumb-bar at the foot of
+   a very tall window. Nothing is hidden or added at any size — it is the same
+   cookbook, sitting differently. */
+  #mainpane{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+  .dishgrid{display:grid;gap:.85em;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .dishgrid.wide{grid-template-columns:1fr}
+
+  /* --- tablet: a wider page, and the cards fill it --- */
+  @media (min-width:640px){
+    #app{max-width:720px}
+    .dishgrid.wide{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+    #tabbar{justify-content:center;gap:clamp(18px,6vw,64px)}
+  }
+
+  /* --- laptop and desktop: the buttons stand up on the left --- */
+  @media (min-width:1024px){
+    #app{max-width:1000px;flex-direction:row;box-shadow:0 0 0 1px #EADFC2}
+    #tabbar{order:-1;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;
+            width:186px;flex:none;padding:18px 12px;border-top:none;border-right:1px solid #EADFC2}
+    .tabbtn{flex-direction:row;justify-content:flex-start;align-items:center;gap:12px;
+            width:100%;padding:11px 13px;border-radius:.75em}
+    .tabbtn:hover{background:#F5ECD5}
+    .tabbtn b{font-size:14px}
+    .tabbtn svg{width:20px;height:20px}
+    #fabwrap{order:-1;width:100%;min-width:0;height:44px;min-height:44px;border-radius:.75em;
+             margin:0 0 14px;font-size:23px;box-shadow:none}
+    .tabbadge{position:static;margin-left:auto;font-size:11px;padding:1px 7px}
+    /* Prose is easier to follow in a column than across a whole screen, so a
+       recipe keeps its heading and its text on the same measure. The wall of
+       dishes is the one thing that wants all the room it can get. */
+    #mainpane{max-width:660px;margin:0 auto}
+    #mainpane.roomy{max-width:none;margin:0}
+  }
+
+  /* --- a short window (a laptop in landscape, a phone on its side) --- */
+  @media (max-height:520px) and (max-width:1023px){
+    #tabbar{padding:5px 8px max(5px, env(safe-area-inset-bottom, 0px))}
+    .tabbtn svg{width:19px;height:19px}
+    .tabbtn b{font-size:9.5px}
+    #fabwrap{width:42px;height:42px;min-width:42px;min-height:42px;font-size:23px;margin-top:-16px}
+  }
+
+    #who{position:fixed;inset:0;background:rgba(45,42,38,.55);z-index:200;display:flex;align-items:center;justify-content:center;padding:1.2em}
   .whocard{background:#FAF2DD;border-radius:1.2em;padding:1.4em 1.3em;max-width:22em;width:100%;text-align:center}
   .whobtns{display:flex;flex-wrap:wrap;gap:.5em;justify-content:center;margin-top:1em}
   .whobtns span{padding:.6em 1.1em;border-radius:1.4em;background:#FFFBEE;border:1px solid #EADFC2;cursor:pointer;font-size:1.02em}
@@ -585,7 +637,7 @@ function homeHtml(){
       </div>
       <div data-act="openSheet" class="ybtn" style="flex:none;display:flex;align-items:center;gap:.5em;border-radius:1.7em;padding:.72em 1.1em;font-size:1em;white-space:nowrap">${esc(catLabel())} <span style="font-size:.6em">▼</span></div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em;-webkit-overflow-scrolling:touch">
+    <div class="pane grid-pane" style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em;-webkit-overflow-scrolling:touch">
       ${todayCardHtml()}
       <div id="gridzone">${gridZoneHtml()}</div>
     </div>
@@ -724,7 +776,7 @@ function gridZoneHtml(){
     <div style="display:flex;align-items:baseline;gap:.5em;margin-bottom:.7em;position:sticky;top:0;background:#FAF2DD;padding-bottom:.3em;z-index:2">
       <span class="eyebrow">${esc(label)}</span><span style="flex:1;height:1px;background:#EADFC2"></span>
     </div>
-    <div style="display:grid;grid-template-columns:${big?'1fr':'1fr 1fr'};gap:.85em">${cards}</div>
+    <div class="dishgrid${big?' wide':''}">${cards}</div>
     ${list.length===0?`<div style="text-align:center;padding:2.5em 1em;color:#87806F;font-size:1.05em">Nothing here yet.<br>Try another course, or tap <span style="color:#8A5A33">+</span> to add a dish.</div>`:''}`;
 }
 
@@ -752,7 +804,7 @@ function recipeHtml(r){
       ${s[2]?imgTag(s[2],'stepthumb','',`onerror="this.style.display='none'"`):''}
     </div>`).join('');
   return `
-  <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+  <div class="pane" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="position:relative">
       <div${phMark(r.img)} style="width:100%;height:13.5em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
       <div style="position:absolute;top:0;left:0;right:0;height:5em;background:linear-gradient(rgba(0,0,0,.45),transparent);pointer-events:none"></div>
@@ -803,7 +855,7 @@ function listHtml(){
       <div style="font-size:1.72em;line-height:1.1">Shopping list</div>
       <div class="tc" style="font-size:.9em;color:#7A6A52;margin-top:.15em">${S.showCn?zh('買餸清單') + ' · ':''}${S.shopping.length} ${S.shopping.length===1?'item':'items'}</div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em">
+    <div class="pane" style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em">
       <div style="display:flex;flex-direction:column;gap:.55em">${rows}</div>
       ${S.shopping.length===0?`<div style="text-align:center;padding:3em 1em;color:#87806F;font-size:1.05em;line-height:1.5">Nothing on the list.<br>Open a recipe and tap <span style="color:#6B7A45">+ Add all</span>.</div>`:''}
       ${S.shopping.some(s=>s.done)?`<div data-act="clearBought" class="ins" style="margin-top:1.2em;text-align:center;font-size:.85em;font-weight:600;color:#8A5A33;cursor:pointer;padding:.8em">Clear bought items</div>`:''}
@@ -819,7 +871,7 @@ function settingsHtml(){
     </div>`).join('');
   const tgl=(on)=>`background:${on?'#F7C948':'#E4DAC2'}"><span style="left:${on?'calc(100% - 1.58em)':'.18em'}"></span>`;
   return `
-  <div style="flex:1;overflow-y:auto">
+  <div class="pane" style="flex:1;overflow-y:auto">
     <div style="padding:1.1em 1.25em 2em">
       <div style="font-size:1.72em;line-height:1.1">Reading comfort</div>
       <div style="font-size:.95em;color:#7A6A52;margin-top:.2em">Only changes this phone.${zh(' 只影響這部手機。')}</div>
@@ -899,7 +951,7 @@ function editHtml(){
       <span style="font-size:1.05em">${S.editingId?'Edit dish':'New dish'}</span>
       <span data-act="saveDraft" class="ins" style="font-size:.92em;font-weight:700;color:#8A5A33;cursor:pointer;padding:.3em .2em">${S.saving?'Saving…':'Save'}</span>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:1.1em 1.25em 2.5em">
+    <div class="pane" style="flex:1;overflow-y:auto;padding:1.1em 1.25em 2.5em">
       <label${phMark(d.img)} style="display:block;position:relative;border-radius:1em;overflow:hidden;border:1.5px dashed #DCCFAF;background-color:#FFFBEE;${bgStyle(d.img)};background-size:cover;background-position:center;height:9em;cursor:pointer">
         <input data-in="photo" type="file" accept="image/*" style="position:absolute;inset:0;opacity:0;cursor:pointer">
         <div class="ins" style="position:absolute;inset:auto 0 0 0;padding:.6em;text-align:center;background:rgba(74,74,70,.72);color:#FFFBEE;font-size:.82em;font-weight:600">${d.img?'Tap to use your own photo instead':'Add a photo of the dish'}</div>
@@ -950,7 +1002,7 @@ function cookHtml(r){
       <div style="flex:1;display:flex;gap:.3em">${bars}</div>
       <span class="ins" style="font-size:.85em;font-weight:700">${idx+1}/${steps.length}</span>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:.5em 1.5em 0;display:flex;flex-direction:column">
+    <div class="pane" style="flex:1;overflow-y:auto;padding:.5em 1.5em 0;display:flex;flex-direction:column">
       <div class="ins" style="font-size:.8em;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#F7C948">${esc(r.en)}</div>
       <div style="font-size:1.75em;font-weight:500;line-height:1.3;margin-top:.7em;text-wrap:pretty">${esc(steps[idx]?steps[idx][0]:'')}</div>
       ${S.showCn?`<div class="tc" style="font-size:1.3em;line-height:1.55;color:#C9C6BB;margin-top:.7em">${esc(steps[idx]?steps[idx][1]:'')}</div>`:''}
@@ -1108,7 +1160,7 @@ function menuHtml(){
       <span style="font-size:1.05em">${esc(book)} · ${esc(dayLabel(key))}</span>
       <span data-act="shareMenu" class="ins" style="font-size:.92em;font-weight:700;color:${chosen.length?'#8A5A33':'#C4B99E'};cursor:pointer;padding:.3em .2em">Send</span>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:1em 1.25em 2.5em">
+    <div class="pane" style="flex:1;overflow-y:auto;padding:1em 1.25em 2.5em">
       <div class="eyebrow" style="margin-bottom:.5em">Whose kitchen${zh(' 邊個廚房')}</div>
       <div class="ins" style="display:flex;gap:.5em;margin-bottom:.9em">${bookChips}</div>
       <div class="eyebrow" style="margin-bottom:.5em">Which day${zh(' 邊一日')}</div>
@@ -1275,7 +1327,7 @@ function render(){
   else if(S.view==='edit' && S.draft) main=editHtml();
   else { S.view='home'; main=homeHtml(); }
   const showTabs=['home','list','settings'].includes(S.view);
-  app.innerHTML = main
+  app.innerHTML = `<div id="mainpane"${S.view==='home'?' class="roomy"':''}>${main}</div>`
     + (showTabs?tabsHtml():'')
     + (S.sheet?sheetHtml():'')
     + (S.view==='cook'&&r?cookHtml(r):'')
