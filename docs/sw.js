@@ -1,7 +1,7 @@
 /* Tin's Family Cookbook — tiny service worker.
    It caches the app shell so the cookbook opens instantly and still works
    with no signal. Recipe data always comes fresh from the network. */
-const CACHE = 'tins-cookbook-v1';
+const CACHE = 'tins-cookbook-v6';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
