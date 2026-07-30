@@ -286,8 +286,19 @@ function photoHash_(s) {
 
 function cleanHash_(h) { return String(h || '').replace(/[^a-f0-9]/gi, '').toLowerCase(); }
 
-/** Stores a data-URL photo (if new) and returns the short reference for it. */
+var PHOTO_EXPECTED = 220000;   // characters; the app shrinks well below this
+
+/**
+ * Stores a data-URL photo (if new) and returns the short reference for it.
+ * A photo is never rejected for being big — losing someone's picture would be
+ * worse than storing it — but an unusually large one is noted in the log, since
+ * it means a phone is running an old copy of the app that does not shrink.
+ */
 function putPhoto_(dataUrl) {
+  if (dataUrl.length > PHOTO_EXPECTED) {
+    Logger.log('Large photo stored (' + Math.round(dataUrl.length / 1400) +
+               ' KB) — that phone may be running an old copy of the app.');
+  }
   var h = photoHash_(dataUrl);
   var name = h + '.txt';
   var folder = photoFolder_();
@@ -339,6 +350,11 @@ function externalisePhotos_(r) {
 function ensureRev_(d) {
   var changed = false;
   if (!d.tombs) { d.tombs = []; changed = true; }
+  if (!d.menus) {
+    d.menus = {};
+    if (d.menu && d.menu.date) d.menus[d.menu.date] = d.menu;   // carry the old one over
+    changed = true;
+  }
   if (!d.courses || !d.courses.length) { d.courses = DEFAULT_COURSES.slice(); changed = true; }
   if (d.rev == null) {
     d.rev = 1;
@@ -435,12 +451,13 @@ function getData(since) {
     return {
       rev: 0, full: true,
       overrides: d.overrides, custom: d.custom, tombs: [],
-      courses: d.courses || DEFAULT_COURSES, menu: d.menu || null
+      courses: d.courses || DEFAULT_COURSES, menu: d.menu || null, menus: futureMenus_(d)
     };
   }
 
   var known = Number((since && since.since) || since || 0);
-  var head = { rev: d.rev, courses: d.courses || DEFAULT_COURSES, menu: d.menu || null };
+  var head = { rev: d.rev, courses: d.courses || DEFAULT_COURSES,
+               menu: d.menu || null, menus: futureMenus_(d) };
 
   if (known === d.rev) { head.unchanged = true; return head; }
 
@@ -465,24 +482,58 @@ function getData(since) {
   return head;
 }
 
-/** Today's menu, shared with everyone. */
+function todayHK_() {
+  return Utilities.formatDate(new Date(), 'Asia/Hong_Kong', 'yyyy-MM-dd');
+}
+
+/** Days that are still to come (plus today). Yesterday's plans are dropped. */
+function futureMenus_(d) {
+  var out = {}, today = todayHK_();
+  var all = d.menus || {};
+  for (var k in all) if (k >= today) out[k] = all[k];
+  return out;
+}
+
+/**
+ * A day's menu, shared with everyone.
+ * Menus are filed by date, so the kitchen can be told about tomorrow, or about
+ * a birthday next week, without disturbing what is being cooked today. Saving
+ * an empty list simply removes that day.
+ */
 function saveMenu(m) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     var d = readData_();
     ensureRev_(d);
+    if (!d.menus) d.menus = {};
+
+    var date = String((m && m.date) || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('A menu needs a date.');
+
     var rev = bumpRev_(d);
-    d.menu = {
-      date: String((m && m.date) || ''),
-      items: ((m && m.items) || []).slice(0, 40).map(String),
-      note: String((m && m.note) || '').slice(0, 500),
-      by: String((m && m.by) || ''),
-      at: new Date().toISOString(),
-      rev: rev
-    };
+    var items = ((m && m.items) || []).slice(0, 40).map(String);
+    if (!items.length) {
+      delete d.menus[date];
+    } else {
+      d.menus[date] = {
+        date: date,
+        items: items,
+        note: String((m && m.note) || '').slice(0, 500),
+        occasion: String((m && m.occasion) || '').slice(0, 80),
+        by: String((m && m.by) || ''),
+        at: new Date().toISOString(),
+        rev: rev
+      };
+    }
+
+    // Keep the file tidy: yesterday and earlier are no longer useful.
+    var today = todayHK_();
+    for (var k in d.menus) if (k < today) delete d.menus[k];
+
+    d.menu = d.menus[today] || null;   // what today's kitchen is cooking
     writeData_(d);
-    return d.menu;
+    return { menus: futureMenus_(d), saved: d.menus[date] || null, rev: rev };
   } finally {
     lock.releaseLock();
   }
