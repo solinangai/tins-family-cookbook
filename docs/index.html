@@ -80,24 +80,37 @@ input,button,textarea{font:inherit;color:inherit}
     #tabbar{justify-content:center;gap:clamp(18px,6vw,64px)}
   }
 
-  /* --- laptop and desktop: the buttons stand up on the left --- */
+  /* --- laptop and desktop: two panes, and the nav stands up on the left ---
+     Each of the three columns scrolls on its own. That is the thing a phone
+     cannot do, and the reason this layout exists: the list of dishes stays put
+     while a recipe is read, and inside the recipe the ingredients stay put
+     while the method is read. */
   @media (min-width:1024px){
-    #app{max-width:1000px;flex-direction:row;box-shadow:0 0 0 1px #EADFC2}
-    #tabbar{order:-1;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;
-            width:186px;flex:none;padding:18px 12px;border-top:none;border-right:1px solid #EADFC2}
-    .tabbtn{flex-direction:row;justify-content:flex-start;align-items:center;gap:12px;
-            width:100%;padding:11px 13px;border-radius:.75em}
-    .tabbtn:hover{background:#F5ECD5}
-    .tabbtn b{font-size:14px}
-    .tabbtn svg{width:20px;height:20px}
-    #fabwrap{order:-1;width:100%;min-width:0;height:44px;min-height:44px;border-radius:.75em;
-             margin:0 0 14px;font-size:23px;box-shadow:none}
-    .tabbadge{position:static;margin-left:auto;font-size:11px;padding:1px 7px}
-    /* Prose is easier to follow in a column than across a whole screen, so a
-       recipe keeps its heading and its text on the same measure. The wall of
-       dishes is the one thing that wants all the room it can get. */
-    #mainpane{max-width:660px;margin:0 auto}
-    #mainpane.roomy{max-width:none;margin:0}
+    #app{max-width:1440px;flex-direction:row;box-shadow:0 0 0 1px #EADFC2}
+    #tabbar{display:none}
+
+    #rail{width:236px;flex:none;background:#FFFBEE;border-right:1px solid #EADFC2;
+          display:flex;flex-direction:column;padding:1.5em 1em 1.25em;min-height:0}
+    .navitem{display:flex;align-items:center;gap:.7em;padding:.62em .7em;border-radius:10px;
+             font-size:.85em;font-weight:600;cursor:pointer;line-height:1}
+    .navitem:hover{background:#FAF2DD}
+    .navico{width:1.25em;height:1.25em;flex:none;display:block}
+    .navico svg{width:100%;height:100%;display:block}
+
+    #browsecol{width:404px;flex:none;background:#FAF2DD;border-right:1px solid #EADFC2;
+               display:flex;flex-direction:column;min-height:0}
+    #recipecol{flex:1;min-width:0;background:#FFFBEE;display:flex;flex-direction:column;min-height:0}
+    #recipecols{display:grid;grid-template-columns:1fr 1.15fr;gap:1.9em;margin-top:1.5em}
+    .chipcat{border:1px solid;border-radius:18px;padding:.4em .8em;font-size:.78em;cursor:pointer;white-space:nowrap}
+    .card.chosen{border-color:#F7C948;box-shadow:0 0 0 1px #F7C948}
+    /* 404px of browse column lands on two cards without a special rule */
+    #mainpane{flex:1;min-width:0;max-width:720px;margin:0 auto}
+
+    /* cook mode: the step on the left, what you need on the right */
+    #cookwide{position:absolute;inset:0;background:#35352F;color:#FFFBEE;z-index:25;
+              display:flex;flex-direction:column;padding:1.8em 2.6em 2em;
+              font-family:'Newsreader','Noto Serif TC',serif}
+    #cookcols{flex:1;display:grid;grid-template-columns:1.55fr .9fr;gap:3em;min-height:0;padding-top:1.6em}
   }
 
   /* --- a short window (a laptop in landscape, a phone on its side) --- */
@@ -758,14 +771,15 @@ function gridZoneHtml(){
         ${S.showCn&&r.cn?`<div class="tc" style="font-size:.87em;color:#7A6A52;margin-top:.12em">${esc(r.cn)}</div>`:''}
         <div class="ins" style="font-size:.74em;color:#87806F;margin-top:.38em">${esc(r.time||'')}${r.serves?' · serves '+esc(r.serves):''}</div>
       </div>`;
-    if(big) return `<div data-act="open:${r.id}" class="card" style="display:flex;align-items:stretch">
+    const chosen = WIDE() && r.id===S.recipeId ? ' chosen' : '';
+    if(big) return `<div data-act="open:${r.id}" class="card${chosen}" style="display:flex;align-items:stretch">
         <div style="position:relative;flex:none;width:5.6em">
           <div${phMark(r.img)} style="width:100%;height:100%;min-height:5.6em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
         </div>
         <div style="flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:.4em">${body}
           <span data-act="fav:${r.id}" style="margin-right:.6em;width:1.7em;height:1.7em;border-radius:50%;background:rgba(255,255,255,.93);display:flex;align-items:center;justify-content:center;font-size:.85em;color:${favC};flex:none">♥</span></div>
       </div>`;
-    return `<div data-act="open:${r.id}" class="card" style="display:flex;flex-direction:column">
+    return `<div data-act="open:${r.id}" class="card${chosen}" style="display:flex;flex-direction:column">
       <div style="position:relative;flex:none">
         <div${phMark(r.img)} style="width:100%;height:6.5em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
         <span data-act="fav:${r.id}" style="position:absolute;top:.45em;right:.45em;width:1.7em;height:1.7em;border-radius:50%;background:rgba(255,255,255,.93);display:flex;align-items:center;justify-content:center;font-size:.85em;color:${favC}">♥</span>
@@ -780,10 +794,10 @@ function gridZoneHtml(){
     ${list.length===0?`<div style="text-align:center;padding:2.5em 1em;color:#87806F;font-size:1.05em">Nothing here yet.<br>Try another course, or tap <span style="color:#8A5A33">+</span> to add a dish.</div>`:''}`;
 }
 
-function recipeHtml(r){
-  const favC=S.favs.includes(r.id)?'#E5734F':'#FFFBEE';
-  const prov = r.addedBy ? 'By '+r.addedBy : 'Family recipe';
-  const ing=(r.ing||[]).map((i,ix)=>{
+/* The ingredient list and the method are the same on a phone and at a desk —
+   only the frame around them changes — so they are written once here. */
+function ingRows(r){
+  return (r.ing||[]).map((i,ix)=>{
     const on=inList(i[1]);
     return `<div style="display:flex;align-items:center;gap:.7em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.7em .85em">
       <span style="font-size:1.15em">${esc(i[0])}</span>
@@ -794,7 +808,9 @@ function recipeHtml(r){
       <span data-act="ingAdd:${ix}" class="ins" style="font-size:.66em;color:${on?'#6B7A45':'#8A5A33'};font-weight:700;border:1.5px solid #EADFC2;border-radius:.5em;padding:.45em .6em;cursor:pointer;white-space:nowrap">${on?'ON LIST':'+ LIST'}</span>
     </div>`;
   }).join('');
-  const steps=(r.steps||[]).map((s,i)=>`
+}
+function stepRows(r){
+  return (r.steps||[]).map((s,i)=>`
     <div style="display:flex;gap:.8em;padding:.8em 0;border-top:1px solid #EADFC2">
       <span class="ins" style="font-size:.78em;font-weight:700;color:#8A5A33;padding-top:.25em">${String(i+1).padStart(2,'0')}</span>
       <div style="min-width:0;flex:1">
@@ -803,6 +819,12 @@ function recipeHtml(r){
       </div>
       ${s[2]?imgTag(s[2],'stepthumb','',`onerror="this.style.display='none'"`):''}
     </div>`).join('');
+}
+
+function recipeHtml(r){
+  const favC=S.favs.includes(r.id)?'#E5734F':'#FFFBEE';
+  const prov = r.addedBy ? 'By '+r.addedBy : 'Family recipe';
+  const ing=ingRows(r), steps=stepRows(r);
   return `
   <div class="pane" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="position:relative">
@@ -1015,20 +1037,25 @@ function cookHtml(r){
   </div>`;
 }
 
+/* One set of icons, drawn once, used by the phone's bottom bar and the rail. */
+const ICON = {
+  heart: on => `<svg viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6c0 4.9-8.8 10.2-8.8 10.2S3.2 13.5 3.2 8.6a4.6 4.6 0 0 1 8.8-1.9 4.6 4.6 0 0 1 8.8 1.9z"/></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-1.7-.3 1.5 1.5 0 0 0-.9 1.4v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.7.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0 .3-1.7 1.5 1.5 0 0 0-1.4-.9h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.7l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 1.7.3h.1a1.5 1.5 0 0 0 .9-1.4v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.7-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0-.3 1.7v.1a1.5 1.5 0 0 0 1.4.9h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>`,
+  pot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16v5.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 14.5z"/><path d="M2.5 9h19"/><path d="M9 6c0-1.1.9-2 2-2M14 6c0-1.1.9-2 2-2"/></svg>`,
+  cal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/><path d="M8.5 14.5l1.5 1.5 3-3.2"/></svg>`
+};
+
 function tabsHtml(){
   const c=(on)=>on?'#8A5A33':'#A0947E';
-  const heart = on => `<svg viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 8.6c0 4.9-8.8 10.2-8.8 10.2S3.2 13.5 3.2 8.6a4.6 4.6 0 0 1 8.8-1.9 4.6 4.6 0 0 1 8.8 1.9z"/></svg>`;
-  const listIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>`;
-  const gear = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-1.7-.3 1.5 1.5 0 0 0-.9 1.4v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.7.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0 .3-1.7 1.5 1.5 0 0 0-1.4-.9h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.7l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 1.7.3h.1a1.5 1.5 0 0 0 .9-1.4v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.7-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0-.3 1.7v.1a1.5 1.5 0 0 0 1.4.9h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>`;
-  const pot = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16v5.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 14.5z"/><path d="M2.5 9h19"/><path d="M9 6c0-1.1.9-2 2-2M14 6c0-1.1.9-2 2-2"/></svg>`;
   const fav = S.view==='home'&&S.cat==='fav';
   return `
   <div id="tabbar" class="ins">
-    <div data-act="goHome" class="tabbtn" style="color:${c(S.view==='home'&&S.cat!=='fav')}">${pot}<b>Cook</b></div>
-    <div data-act="goFavs" class="tabbtn" style="color:${fav?'#E5734F':c(false)}">${heart(fav)}<b>Favourite</b></div>
+    <div data-act="goHome" class="tabbtn" style="color:${c(S.view==='home'&&S.cat!=='fav')}">${ICON.pot}<b>Cook</b></div>
+    <div data-act="goFavs" class="tabbtn" style="color:${fav?'#E5734F':c(false)}">${ICON.heart(fav)}<b>Favourite</b></div>
     <div id="fabwrap" data-act="goAdd" class="ybtn">+</div>
-    <div data-act="goList" class="tabbtn" style="color:${c(S.view==='list')};position:relative">${listIcon}<b>Shopping</b>${S.shopping.length?`<span class="tabbadge">${S.shopping.length}</span>`:''}</div>
-    <div data-act="goSettings" class="tabbtn" style="color:${c(S.view==='settings')}">${gear}<b>Settings</b></div>
+    <div data-act="goList" class="tabbtn" style="color:${c(S.view==='list')};position:relative">${ICON.list}<b>Shopping</b>${S.shopping.length?`<span class="tabbadge">${S.shopping.length}</span>`:''}</div>
+    <div data-act="goSettings" class="tabbtn" style="color:${c(S.view==='settings')}">${ICON.gear}<b>Settings</b></div>
   </div>`;
 }
 
@@ -1312,25 +1339,226 @@ function pullEnd(){
   loadShared({manual:true}).then(function(){ pullPaint(0); });
 }
 
+
+/* ============ the cookbook on a desk ============
+
+   A phone shows one thing at a time because it has to. A laptop does not, and
+   the single most useful thing it can do is put the list of dishes and the open
+   recipe side by side — and, inside the recipe, the ingredients beside the
+   method, so nobody scrolls up and down between what they need and what they
+   are doing. The five buttons stand up in a rail on the left, where a pointer
+   expects them, and the course sheet becomes plain chips because there is room.
+
+   Everything below only runs at 1024px and wider. Narrower than that, the phone
+   layout is untouched. */
+const WIDE_Q = window.matchMedia('(min-width:1024px)');
+const WIDE = () => WIDE_Q.matches;
+
+function railNav(){
+  const c = on => on ? '#8A5A33' : '#6E6357';
+  const row = (act, icon, label, right, on) => `
+    <div data-act="${act}" class="navitem" style="background:${on?'#F5E9CC':'transparent'};color:${c(on)}">
+      <span class="navico">${icon}</span><span>${label}</span>${right||''}</div>`;
+  const count = n => n ? `<span style="margin-left:auto;font-size:.78em;color:#A0947E">${n}</span>` : '';
+  const pill  = n => n ? `<span style="margin-left:auto;background:#F7C948;color:#4A4A46;font-size:.68em;font-weight:700;border-radius:1em;padding:.15em .5em">${n}</span>` : '';
+  const today = menuItems(S.book, dayKey(0)).length;
+  const onHome = S.view==='home'||S.view==='recipe'||S.view==='cook';
+  return row('goHome', ICON.pot,  'Cook',      '',              onHome && S.cat!=='fav')
+       + row('goFavs', ICON.heart(S.cat==='fav'), 'Favourite', count(S.favs.length), onHome && S.cat==='fav')
+       + row('goMenu', ICON.cal,  'Today',     pill(today),     S.view==='menu')
+       + row('goList', ICON.list, 'Shopping',  pill(S.shopping.length), S.view==='list')
+       + row('goSettings', ICON.gear, 'Settings', '',           S.view==='settings');
+}
+
+function railHtml(){
+  const day = new Date().toLocaleDateString('en-GB',{weekday:'long'});
+  const n = merged().length;
+  const who = whoAmI();
+  const state = S.syncing ? 'checking…' : (SHARED ? 'shared with the family' : 'on this device');
+  return `
+  <div id="rail">
+    <div style="padding:0 .4em">
+      <div class="eyebrow" style="font-size:.62em;letter-spacing:.18em">${day}</div>
+      <div style="font-size:1.55em;line-height:1.12;letter-spacing:-.02em;margin-top:.5em">Tin's Family<br>Cookbook</div>
+      <div style="font-size:.85em;font-style:italic;color:#87806F;margin-top:.5em;line-height:1.4">Made with love for<br>our home kitchen</div>
+    </div>
+    <div class="ins" style="display:flex;flex-direction:column;gap:3px;margin-top:1.6em">${railNav()}</div>
+    <div data-act="goAdd" class="ybtn ins" style="margin-top:1.15em;border-radius:.75em;padding:.85em;display:flex;align-items:center;justify-content:center;gap:.45em;font-size:.92em;font-weight:700">
+      <span style="font-size:1.25em;font-weight:300;line-height:1">+</span> Add a dish</div>
+    <div style="margin-top:auto;display:flex;align-items:center;gap:.65em;padding:.7em .4em 0;border-top:1px solid #EADFC2">
+      <span data-act="goSettings" style="width:2em;height:2em;border-radius:50%;background:#F7C948;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;overflow:hidden"><img src="${AVATAR}" alt="" style="width:82%;height:82%;object-fit:contain;display:block"></span>
+      <span class="ins" style="font-size:.78em;line-height:1.35;color:#6E6357;min-width:0">${n} dishes<br><span style="font-weight:400;color:#A0947E">${esc(who?who+' · '+state:state)}</span></span>
+    </div>
+  </div>`;
+}
+
+/* The browse column: the same shelves, search and cards as the phone, with the
+   course sheet unfolded into chips because a sheet over a wide window is silly. */
+function browseHtml(){
+  const shelf = merged().filter(r=>bookOf(r)===S.book);
+  const chips = CATS.map(c=>{
+    const on = S.cat===c.key;
+    const k = c.key==='all' ? shelf.length : shelf.filter(r=>r.cat===c.key).length;
+    if(c.key!=='all' && !k) return '';
+    return `<span data-act="pickCat:${c.key}" class="chipcat" style="background:${on?'#F7C948':'#FFFBEE'};border-color:${on?'#F7C948':'#EADFC2'};color:${on?'#4A4A46':'#6E6357'};font-weight:${on?700:600}">${esc(c.en)}${S.showCn&&c.cn?` <span class="tc" style="opacity:.75">${esc(c.cn)}</span>`:''}<span style="opacity:.6;margin-left:.35em">${k}</span></span>`;
+  }).join('');
+  return `
+  <div id="browsecol">
+    <div style="padding:1.35em 1.35em .85em;flex:none">
+      ${bookTabsHtml()}
+      <div style="display:flex;align-items:center;gap:.6em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:1.7em;padding:.72em 1.1em">
+        <span style="width:.85em;height:.85em;border:2px solid #A0947E;border-radius:50%;flex:none"></span>
+        <input data-in="query" value="${esc(S.query)}" placeholder="Search dish or ingredient" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:1em;font-family:'Newsreader','Noto Serif TC',serif">
+      </div>
+      <div class="ins" style="display:flex;flex-wrap:wrap;gap:.4em;margin-top:.8em">${chips}</div>
+    </div>
+    <div class="pane grid-pane" style="flex:1;overflow-y:auto;padding:0 1.35em 1.35em">
+      ${todayCardHtml()}
+      <div id="gridzone">${gridZoneHtml()}</div>
+    </div>
+  </div>`;
+}
+
+function emptyPaneHtml(){
+  return `
+  <div id="recipecol">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;color:#A0947E">
+      <div style="font-size:2.4em;opacity:.5">🍲</div>
+      <div style="font-size:1.15em;color:#87806F;margin-top:.6em">Pick a dish to start${zh('　揀個菜式開始')}</div>
+    </div>
+  </div>`;
+}
+
+/* The open dish, with the ingredients and the method beside each other. */
+function recipePaneHtml(r){
+  const favC = S.favs.includes(r.id) ? '#E5734F' : '#FFFBEE';
+  const prov = r.addedBy ? 'By '+r.addedBy : 'Family recipe';
+  const on = onMenu(r.id, S.book, dayKey(0));
+  return `
+  <div id="recipecol">
+    <div style="position:relative;flex:none">
+      <div${phMark(r.img)} style="width:100%;height:14.5em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:4.7em;background:linear-gradient(rgba(0,0,0,.4),transparent);pointer-events:none"></div>
+      <div style="position:absolute;top:.85em;right:1em;display:flex;gap:.5em">
+        <span data-act="toggleFav" style="height:2.4em;padding:0 .95em;border-radius:1.2em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:${favC};display:flex;align-items:center;font-size:.95em;cursor:pointer">♥</span>
+        <span data-act="editThis" class="ins" style="height:2.4em;padding:0 1.1em;border-radius:1.2em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;display:flex;align-items:center;font-size:.85em;font-weight:600;cursor:pointer">Edit</span>
+      </div>
+    </div>
+    <div class="pane" style="flex:1;overflow-y:auto;padding:1.35em 1.85em 2em">
+      <div style="display:flex;align-items:flex-start;gap:1.5em">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:1.9em;line-height:1.14;letter-spacing:-.025em">${esc(r.en)}</div>
+          ${S.showCn?`<div class="tc" style="font-size:1.2em;color:#7A6A52;margin-top:.2em">${esc(r.cn)}</div>`:''}
+          ${noCn(r.tip)?`<div style="font-size:.95em;font-style:italic;color:#6E6357;margin-top:.75em;border-left:2px solid #8A5A33;padding-left:.75em;line-height:1.5">${esc(noCn(r.tip))}</div>`:''}
+        </div>
+        <div class="ins" style="flex:none;display:flex;gap:.55em;padding-top:.25em">
+          <div data-act="startCook" class="ybtn" style="padding:0 1.35em;height:2.9em;border-radius:.85em;display:flex;align-items:center;font-size:.95em;font-weight:700">Start cooking</div>
+          ${r.ytid?`<a href="https://www.youtube.com/watch?v=${esc(r.ytid)}" target="_blank" rel="noopener" style="flex:none;padding:0 1em;height:2.9em;background:#FFFBEE;border:1.5px solid #EADFC2;border-radius:.85em;display:flex;align-items:center;font-size:.8em;font-weight:700;color:#6E6357">▶ Video</a>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:.45em;margin-top:1em;flex-wrap:wrap">
+        <span class="chip">${esc(r.time||'—')}</span>
+        <span class="chip">Serves ${esc(r.serves||'—')}</span>
+        <span class="chip">${esc(prov)}</span>
+        <span class="chip" style="background:#EFE6CF">${esc(bookOf(r))}</span>
+        ${r.lastCooked?`<span class="chip">Cooked ${esc(r.lastCooked)}</span>`:''}
+      </div>
+      ${bylineFor(r)}
+      <div data-act="${on?'menuOff':'menuOn'}:${r.id}" class="ins" style="margin-top:.9em;display:inline-flex;border:1.5px solid ${on?'#6B7A45':'#EADFC2'};background:${on?'#F2F5E8':'#FFFBEE'};border-radius:.8em;padding:.65em 1.1em;font-size:.85em;font-weight:700;color:${on?'#6B7A45':'#8A5A33'};cursor:pointer">${on?"✓ On today's menu" + zh(" 今日餐單"):"+ Cook this today" + zh(" 加入今日餐單")}</div>
+
+      <div id="recipecols">
+        <div>
+          <div class="rule" style="margin:0 0 .7em"><span class="eyebrow">Ingredients</span><span class="line"></span><span data-act="addAll" style="font-size:.75em;font-weight:700;color:#6B7A45;cursor:pointer">+ Add all</span></div>
+          <div style="display:flex;flex-direction:column;gap:.5em">${ingRows(r)}</div>
+        </div>
+        <div>
+          <div class="rule" style="margin:0 0 .7em"><span class="eyebrow">Method</span><span class="line"></span></div>
+          <div style="display:flex;flex-direction:column">${stepRows(r)}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Cook mode at a desk: the step big enough to read from across the worktop,
+   with the ingredients still in sight and a look at what comes next. */
+function cookWideHtml(r){
+  const steps = r.steps||[];
+  const idx = Math.min(S.step, Math.max(0, steps.length-1));
+  const s = steps[idx] || ['',''];
+  const next = steps[idx+1];
+  const bars = steps.map((x,i)=>`<span style="flex:1;height:6px;border-radius:3px;background:${i<=idx?'#F7C948':'#5C5C55'}"></span>`).join('');
+  const ing = (r.ing||[]).map(i=>`
+    <div style="display:flex;gap:.6em;align-items:baseline">
+      <span style="font-size:1.05em">${esc(i[0])}</span>
+      <span><span style="display:block;color:#FFFBEE;font-size:1.05em">${esc(i[1])}</span>
+      ${S.showCn&&i[2]?`<span class="tc" style="display:block;color:#C9C6BB;font-size:.95em">${esc(i[2])}</span>`:''}</span>
+    </div>`).join('');
+  return `
+  <div id="cookwide">
+    <div style="display:flex;align-items:center;gap:1.1em;flex:none">
+      <span data-act="endCook" class="ins" style="font-size:.8em;font-weight:700;color:#A9A69B;cursor:pointer">✕ Exit</span>
+      <div style="flex:1;display:flex;gap:6px">${bars}</div>
+      <span class="ins" style="font-size:.9em;font-weight:700">${idx+1} / ${steps.length}</span>
+    </div>
+    <div id="cookcols">
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <div class="eyebrow" style="color:#F7C948;font-size:.72em">${esc(r.en)}${S.showCn&&r.cn?' · '+esc(r.cn):''}</div>
+        <div style="color:#FFFBEE;font-size:2.6em;line-height:1.28;margin-top:.5em;text-wrap:pretty">${esc(s[0])}</div>
+        ${S.showCn&&s[1]?`<div class="tc" style="color:#C9C6BB;font-size:1.65em;line-height:1.55;margin-top:.5em">${esc(s[1])}</div>`:''}
+        ${s[2]?imgTag(s[2],'cookimg','',`onerror="this.style.display='none'"`):''}
+        <div class="ins" style="margin-top:auto;display:flex;gap:.8em;padding-top:1.4em">
+          <div data-act="prevStep" style="width:5.4em;height:3.6em;border:2px solid #63635B;border-radius:.8em;display:flex;align-items:center;justify-content:center;font-size:1.4em;color:#FFFBEE;cursor:pointer;${idx===0?'opacity:.35;pointer-events:none':''}">‹</div>
+          <div data-act="nextStep" class="ybtn" style="flex:1;max-width:24em;height:3.6em;border-radius:.8em;display:flex;align-items:center;justify-content:center;font-size:1.05em;font-weight:700">${idx>=steps.length-1?(S.showCn?'Done — 好味！':'Done!'):'Next step'}</div>
+        </div>
+      </div>
+      <div style="border-left:1px solid #5C5C55;padding-left:1.9em;min-width:0;overflow-y:auto">
+        <div class="eyebrow" style="color:#A9A69B;font-size:.66em">Ingredients for reference</div>
+        <div style="display:flex;flex-direction:column;gap:.65em;margin-top:1em">${ing}</div>
+        ${next?`<div style="margin-top:1.5em;padding-top:1em;border-top:1px solid #5C5C55">
+          <div class="eyebrow" style="color:#A9A69B;font-size:.66em">Next up</div>
+          <div style="color:#C9C6BB;font-size:1em;line-height:1.45;margin-top:.5em">${String(idx+2).padStart(2,'0')} · ${esc(next[0])}</div>
+        </div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
 /* ============ render ============ */
+function viewHtml(){
+  const r = cur();
+  if(S.view==='home') return homeHtml();
+  if((S.view==='recipe'||S.view==='cook') && r) return recipeHtml(r);
+  if(S.view==='list') return listHtml();
+  if(S.view==='menu') return menuHtml();
+  if(S.view==='settings') return settingsHtml();
+  if(S.view==='edit' && S.draft) return editHtml();
+  S.view='home'; return homeHtml();
+}
+
 function render(){
   const app=document.getElementById('app');
   const size=SIZES.find(z=>z.key===S.size)||SIZES[1];
   app.style.fontSize=size.base+'px';
   const r=cur();
-  let main='';
-  if(S.view==='home') main=homeHtml();
-  else if((S.view==='recipe'||S.view==='cook') && r) main=recipeHtml(r);
-  else if(S.view==='list') main=listHtml();
-  else if(S.view==='menu') main=menuHtml();
-  else if(S.view==='settings') main=settingsHtml();
-  else if(S.view==='edit' && S.draft) main=editHtml();
-  else { S.view='home'; main=homeHtml(); }
-  const showTabs=['home','list','settings'].includes(S.view);
-  app.innerHTML = `<div id="mainpane"${S.view==='home'?' class="roomy"':''}>${main}</div>`
-    + (showTabs?tabsHtml():'')
-    + (S.sheet?sheetHtml():'')
-    + (S.view==='cook'&&r?cookHtml(r):'')
+  const wide=WIDE();
+  /* Browsing means the list and the open dish sit side by side. Everything
+     else — the shopping list, settings, the planner, adding a dish — takes the
+     whole space to the right of the rail. */
+  const browsing = wide && (S.view==='home' || S.view==='recipe' || S.view==='cook');
+  let shell;
+  if(wide){
+    shell = railHtml() + (browsing
+      ? browseHtml() + (r ? recipePaneHtml(r) : emptyPaneHtml())
+      : `<div id="mainpane">${viewHtml()}</div>`);
+  } else {
+    const showTabs=['home','list','settings'].includes(S.view);
+    shell = `<div id="mainpane"${S.view==='home'?' class="roomy"':''}>${viewHtml()}</div>`
+          + (showTabs?tabsHtml():'');
+  }
+  app.innerHTML = shell
+    + (S.sheet && !wide ? sheetHtml():'')
+    + (S.view==='cook'&&r ? (wide?cookWideHtml(r):cookHtml(r)) :'')
     + (S.market?marketHtml():'')
     + (S.askWho?whoHtml():'')
     + (S.newCourse?courseModalHtml():'')
@@ -1340,6 +1568,22 @@ function render(){
   paintPhotos();
   watchPhotos();
 }
+
+/* Dragging a window across the 1024px line rebuilds the page in the other shape. */
+if(WIDE_Q.addEventListener) WIDE_Q.addEventListener('change', ()=>{ S.sheet=false; render(); });
+else if(WIDE_Q.addListener) WIDE_Q.addListener(()=>{ S.sheet=false; render(); });
+
+/* At a desk the arrow keys step through a recipe, so nobody has to reach for
+   the trackpad with wet hands. Escape leaves cook mode. */
+document.addEventListener('keydown', e=>{
+  if(S.view!=='cook') return;
+  const t=e.target;
+  if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA')) return;
+  if(e.key==='ArrowRight' || e.key===' '){ e.preventDefault(); ACT.nextStep(); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); ACT.prevStep(); }
+  else if(e.key==='Escape'){ e.preventDefault(); ACT.endCook(); }
+});
+
 function whoHtml(){
   return `
   <div id="who">
@@ -1711,6 +1955,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 const ACT={
   noop:(a,b,e)=>{ e.stopPropagation(); },
   goHome:()=>{ if(S.view==='home'&&S.cat==='fav') S.cat='all'; S.view='home'; render(); },
+  /* Nothing to go back from at a desk — the list never left the screen. */
   goFavs:()=>{ S.view='home'; S.cat='fav'; S.query=''; render(); },
   goList:()=>{ S.view='list'; render(); },
   goSettings:()=>{ S.view='settings'; render(); },
