@@ -22,6 +22,20 @@
  * v5: doPost() lets the installed app (GitHub Pages) read and write the same
  *     Drive file, so the data still lives only in this Google account.
  *
+ * v6 makes opening the app fast, and adds the things the family asked for:
+ *  - Photos no longer live inside the data file. Each one is saved once, under
+ *    its own fingerprint, in a "Tin's Cookbook Photos" folder in this Drive.
+ *    A recipe just holds a short reference like "ph:9f2c...". Phones fetch a
+ *    photo only when it scrolls into view, then keep it forever. The data file
+ *    drops from ~9 MB to a few hundred KB.
+ *  - Every change bumps a revision number, and every dish carries the revision
+ *    it was last touched at. A phone says "I know up to revision N" and gets
+ *    back only what changed since. Opening the app is then almost free.
+ *  - Courses are editable by the family (no longer fixed in the app).
+ *  - Today's menu is stored here too, so whatever Mum picks shows up on the
+ *    helper's phone straight away.
+ *  Run migratePhotos() ONCE from the editor after installing this.
+ *
  * Nothing to configure. No keys, no billing, no region restrictions.
  */
 
@@ -40,6 +54,17 @@ var BACKUP_EVERY_MS = 6 * 60 * 60 * 1000;    // at most one auto-backup per 6 ho
  * Bonus: updating src/index.html on GitHub updates the app for everyone
  * with NO redeploy.
  */
+var PHOTO_FOLDER = "Tin's Cookbook Photos";
+var DEFAULT_COURSES = [
+  { key: 'breakfast', en: 'Breakfast', cn: '早餐' },
+  { key: 'lunch',     en: 'Lunch',     cn: '午餐' },
+  { key: 'soup',      en: 'Soup',      cn: '湯水' },
+  { key: 'appetizer', en: 'Appetiser', cn: '前菜' },
+  { key: 'main',      en: 'Main',      cn: '主菜' },
+  { key: 'dessert',   en: 'Sweet',     cn: '糖水' },
+  { key: 'baby',      en: 'Baby Food', cn: '嬰兒食物' }
+];
+
 var APP_URL = 'https://raw.githubusercontent.com/solinangai/tins-family-cookbook/main/docs/index.html';
 var APP_CACHE = 'tins-cookbook-app-cache.html';
 
@@ -62,7 +87,10 @@ function doPost(e) {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     var action = body.action;
     var payload = body.payload;
-    if (action === 'get') out = { ok: true, data: getData() };
+    if (action === 'get') out = { ok: true, data: getData(payload) };
+    else if (action === 'photos') out = { ok: true, data: getPhotos(payload) };
+    else if (action === 'menu') out = { ok: true, data: saveMenu(payload) };
+    else if (action === 'courses') out = { ok: true, data: saveCourses(payload) };
     else if (action === 'save') out = { ok: true, data: saveRecipe(payload) };
     else if (action === 'delete') out = { ok: true, data: deleteRecipe(payload) };
     else if (action === 'reset') out = { ok: true, data: resetRecipe(payload) };
@@ -210,13 +238,165 @@ function dataStats() {
   var raw = getFile_().getBlob().getDataAsString();
   var d = JSON.parse(raw);
   var edited = 0, hidden = 0;
-  for (var k in d.overrides) { if (d.overrides[k] === 'deleted') hidden++; else edited++; }
+  for (var k in d.overrides) {
+    var o = d.overrides[k];
+    if (o === 'deleted' || (o && o.del)) hidden++; else edited++;
+  }
+  var photos = 0;
+  try {
+    var it = photoFolder_().getFiles();
+    while (it.hasNext()) { it.next(); photos++; }
+  } catch (e) {}
   var msg = 'Cookbook data: ' + (d.custom || []).length + ' dishes added by the family, ' +
             edited + ' built-in dishes edited, ' + hidden + ' hidden, ' +
-            raw.length + ' characters total.';
+            'revision ' + (d.rev == null ? '(not migrated)' : d.rev) + ', ' +
+            photos + ' photos stored separately, ' +
+            raw.length + ' characters in the data file.';
   Logger.log(msg);
   Logger.log('Added dishes: ' + (d.custom || []).map(function (r) { return r.en || r.cn; }).join(' | '));
   return msg;
+}
+
+/* ---------- photos live outside the data file ----------
+
+   A photo taken on a phone arrives as a "data:image/jpeg;base64,..." string.
+   Kept inside the recipe, a few dozen of those turn the cookbook into a
+   multi-megabyte download that every phone repeats on every open.
+
+   So each photo is written once into its own small Drive file, named after a
+   fingerprint of its contents, and the recipe keeps only "ph:<fingerprint>".
+   Identical photos therefore cost nothing twice, a photo never changes once
+   written, and a phone that has already seen it never asks again.            */
+
+function photoFolder_() {
+  var it = DriveApp.getFoldersByName(PHOTO_FOLDER);
+  if (it.hasNext()) return it.next();
+  return DriveApp.createFolder(PHOTO_FOLDER);
+}
+
+function photoHash_(s) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8);
+  var out = '';
+  for (var i = 0; i < bytes.length; i++) {
+    var v = (bytes[i] + 256) % 256;
+    out += (v < 16 ? '0' : '') + v.toString(16);
+  }
+  return out;
+}
+
+function cleanHash_(h) { return String(h || '').replace(/[^a-f0-9]/gi, '').toLowerCase(); }
+
+/** Stores a data-URL photo (if new) and returns the short reference for it. */
+function putPhoto_(dataUrl) {
+  var h = photoHash_(dataUrl);
+  var name = h + '.txt';
+  var folder = photoFolder_();
+  if (!folder.getFilesByName(name).hasNext()) folder.createFile(name, dataUrl, 'text/plain');
+  return 'ph:' + h;
+}
+
+/** One photo back as a data URL. */
+function getPhoto(h) {
+  var name = cleanHash_(h);
+  if (!name) return '';
+  var it = photoFolder_().getFilesByName(name + '.txt');
+  return it.hasNext() ? it.next().getBlob().getDataAsString() : '';
+}
+
+/** Several photos at once: { fingerprint: dataUrl }. Missing ones are skipped. */
+function getPhotos(list) {
+  var out = {};
+  if (!list || !list.length) return out;
+  var folder = photoFolder_();
+  for (var i = 0; i < list.length && i < 12; i++) {
+    var name = cleanHash_(list[i]);
+    if (!name || out[name]) continue;
+    try {
+      var it = folder.getFilesByName(name + '.txt');
+      if (it.hasNext()) out[name] = it.next().getBlob().getDataAsString();
+    } catch (e) {}
+  }
+  return out;
+}
+
+/** Replaces any inline photo on a recipe with a reference. Safe to re-run. */
+function externalisePhotos_(r) {
+  if (!r || typeof r !== 'object') return r;
+  if (typeof r.img === 'string' && r.img.indexOf('data:image') === 0) r.img = putPhoto_(r.img);
+  (r.steps || []).forEach(function (s) {
+    if (s && typeof s[2] === 'string' && s[2].indexOf('data:image') === 0) s[2] = putPhoto_(s[2]);
+  });
+  return r;
+}
+
+/* ---------- revisions ----------
+
+   The data file carries a counter. Every change bumps it, and stamps the dish
+   that changed with the new value. A phone remembers the highest number it has
+   seen; next time it asks only for dishes stamped higher than that.          */
+
+/** Fills in the v6 fields on older data. Returns true if anything was added. */
+function ensureRev_(d) {
+  var changed = false;
+  if (!d.tombs) { d.tombs = []; changed = true; }
+  if (!d.courses || !d.courses.length) { d.courses = DEFAULT_COURSES.slice(); changed = true; }
+  if (d.rev == null) {
+    d.rev = 1;
+    for (var k in d.overrides) {
+      var o = d.overrides[k];
+      if (o === 'deleted') d.overrides[k] = { del: true, rev: 1 };
+      else if (o && typeof o === 'object') o.rev = 1;
+    }
+    (d.custom || []).forEach(function (c) { c.rev = 1; });
+    changed = true;
+  }
+  return changed;
+}
+
+function bumpRev_(d) { d.rev = (d.rev || 0) + 1; return d.rev; }
+
+/**
+ * ONE-OFF, run from the editor: moves every photo already inside the data file
+ * out into the photo folder, and stamps the first revision numbers.
+ * It stops after four minutes so it never hits the Apps Script time limit —
+ * if the log says "RUN IT AGAIN", just press Run once more. Re-running is
+ * harmless: photos already moved are left alone.
+ */
+function migratePhotos() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(60000);
+  try {
+    var before = getFile_().getBlob().getDataAsString().length;
+    backupNow('before-photo-move');
+    var d = readData_();
+    ensureRev_(d);
+
+    var items = (d.custom || []).slice();
+    for (var k in d.overrides) {
+      var o = d.overrides[k];
+      if (o && typeof o === 'object' && !o.del) items.push(o);
+    }
+
+    var started = new Date().getTime();
+    var checked = 0, shrank = 0, finished = true;
+    for (var i = 0; i < items.length; i++) {
+      var was = JSON.stringify(items[i]).length;
+      externalisePhotos_(items[i]);
+      checked++;
+      if (JSON.stringify(items[i]).length < was) shrank++;
+      if (new Date().getTime() - started > 240000) { finished = false; break; }
+    }
+
+    writeData_(d);
+    var after = getFile_().getBlob().getDataAsString().length;
+    Logger.log('Photo move: checked ' + checked + ' of ' + items.length + ' dishes, ' +
+               shrank + ' had photos moved out.');
+    Logger.log('Data file: ' + before + ' -> ' + after + ' characters.');
+    Logger.log(finished ? 'FINISHED. Nothing else to do.' : 'NOT FINISHED — press Run again to continue.');
+    return finished;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ---------- translation ---------- */
@@ -242,8 +422,96 @@ function autoTranslate_(r) {
 
 /* ---------- API called from the web page ---------- */
 
-function getData() {
-  return readData_();
+/**
+ * What a phone asks for on opening.
+ * Pass the highest revision that phone already has and it gets back only the
+ * dishes changed since — usually nothing at all. Pass nothing and it gets
+ * everything. Today's menu and the course list are tiny, so they always come.
+ */
+function getData(since) {
+  var d = readData_();
+
+  if (d.rev == null) {              // not migrated yet: send it all, as before
+    return {
+      rev: 0, full: true,
+      overrides: d.overrides, custom: d.custom, tombs: [],
+      courses: d.courses || DEFAULT_COURSES, menu: d.menu || null
+    };
+  }
+
+  var known = Number((since && since.since) || since || 0);
+  var head = { rev: d.rev, courses: d.courses || DEFAULT_COURSES, menu: d.menu || null };
+
+  if (known === d.rev) { head.unchanged = true; return head; }
+
+  if (!known || known > d.rev) {    // first time on this phone, or a restore
+    head.full = true;
+    head.overrides = d.overrides;
+    head.custom = d.custom;
+    head.tombs = d.tombs || [];
+    return head;
+  }
+
+  head.delta = true;
+  head.overrides = {};
+  head.custom = [];
+  head.tombs = [];
+  for (var k in d.overrides) {
+    var o = d.overrides[k];
+    if (o && typeof o === 'object' && (o.rev || 0) > known) head.overrides[k] = o;
+  }
+  (d.custom || []).forEach(function (c) { if ((c.rev || 0) > known) head.custom.push(c); });
+  (d.tombs || []).forEach(function (t) { if ((t.rev || 0) > known) head.tombs.push(t); });
+  return head;
+}
+
+/** Today's menu, shared with everyone. */
+function saveMenu(m) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var d = readData_();
+    ensureRev_(d);
+    var rev = bumpRev_(d);
+    d.menu = {
+      date: String((m && m.date) || ''),
+      items: ((m && m.items) || []).slice(0, 40).map(String),
+      note: String((m && m.note) || '').slice(0, 500),
+      by: String((m && m.by) || ''),
+      at: new Date().toISOString(),
+      rev: rev
+    };
+    writeData_(d);
+    return d.menu;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** The family's own list of courses. Keys are never renamed, only added. */
+function saveCourses(list) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var d = readData_();
+    ensureRev_(d);
+    var out = [];
+    (list || []).forEach(function (c) {
+      var key = String((c && c.key) || '').replace(/[^A-Za-z0-9_]/g, '').toLowerCase();
+      if (!key) return;
+      for (var i = 0; i < out.length; i++) if (out[i].key === key) return;
+      var en = String((c && c.en) || key).slice(0, 40);
+      var cn = String((c && c.cn) || '').slice(0, 40) || tzh_(en);
+      out.push({ key: key, en: en, cn: cn });
+    });
+    if (!out.length) throw new Error('A cookbook needs at least one course.');
+    d.courses = out;
+    bumpRev_(d);
+    writeData_(d);
+    return d.courses;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function isCustomId_(id) {
@@ -256,7 +524,10 @@ function saveRecipe(obj) {
   try {
     maybeBackup_();
     obj = autoTranslate_(obj);
+    obj = externalisePhotos_(obj);
     var d = readData_();
+    ensureRev_(d);
+    obj.rev = bumpRev_(d);
     if (obj.id && isCustomId_(obj.id)) {
       obj.custom = true;
       var i = -1;
@@ -267,6 +538,7 @@ function saveRecipe(obj) {
     } else {
       obj.id = 'c' + Date.now();
       obj.custom = true;
+      obj.rev = d.rev;
       d.custom.push(obj);
     }
     writeData_(d);
@@ -283,10 +555,13 @@ function deleteRecipe(id) {
   try {
     maybeBackup_();
     var d = readData_();
+    ensureRev_(d);
+    var rev = bumpRev_(d);
     if (isCustomId_(id)) {
       d.custom = d.custom.filter(function (x) { return x.id !== id; });
+      d.tombs.push({ id: id, rev: rev });   // so other phones drop it too
     } else {
-      d.overrides[id] = 'deleted';
+      d.overrides[id] = { del: true, rev: rev };
     }
     writeData_(d);
     return true;
@@ -302,7 +577,9 @@ function resetRecipe(id) {
   try {
     maybeBackup_();
     var d = readData_();
+    ensureRev_(d);
     delete d.overrides[id];
+    bumpRev_(d);
     writeData_(d);
     return true;
   } finally {
