@@ -24,7 +24,11 @@ input,button,textarea{font:inherit;color:inherit}
 @keyframes rise{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 #frame{height:100dvh;display:flex;justify-content:center;background:#EFE6CF}
-#app{width:100%;max-width:440px;height:100%;position:relative;overflow:hidden;background:#FAF2DD;font-family:'Newsreader','Noto Serif TC',serif;color:#4A4A46;display:flex;flex-direction:column}
+#app{width:100%;max-width:440px;height:100%;position:relative;overflow:hidden;background:#FAF2DD;font-family:'Newsreader','Noto Serif TC',serif;color:#4A4A46;display:flex;flex-direction:column;overscroll-behavior:contain}
+#app *{overscroll-behavior-y:contain}
+  #ptrbox{position:absolute;top:0;left:0;right:0;height:0;z-index:90;pointer-events:none}
+  .ptrpill{position:absolute;top:0;left:50%;background:#4A4A46;color:#FAF2DD;padding:.45em 1em;border-radius:1.4em;
+           font-size:12px;white-space:nowrap;font-family:'Instrument Sans',sans-serif;font-weight:600}
 .ins{font-family:'Instrument Sans',sans-serif}
 .tc{font-family:'Noto Serif TC',serif}
 .eyebrow{font-size:.72em;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A5A33;font-family:'Instrument Sans',sans-serif}
@@ -48,6 +52,7 @@ input,button,textarea{font:inherit;color:inherit}
   .tabbadge{position:absolute;top:-4px;right:8px;background:#F7C948;color:#4A4A46;font-size:9.5px;font-weight:700;
             border-radius:10px;padding:1px 5px;line-height:1.5}
   .booktab{flex:1;text-align:center;padding:.55em 0;border:1px solid;border-radius:.7em;font-size:.86em;cursor:pointer}
+  .daychip{flex:none;white-space:nowrap;padding:.5em .8em;border:1px solid;border-radius:1.3em;font-size:.82em;cursor:pointer}
   .stepimg{width:100%;max-width:100%;border-radius:.7em;margin-top:.5em;display:block;background:#F0E6CF}
   .cookimg{width:100%;max-height:38vh;object-fit:cover;border-radius:.9em;margin-top:.9em;background:#2b2b26}
   .stepthumb{width:4.2em;height:4.2em;object-fit:cover;border-radius:.5em;flex:none;background:#F0E6CF}
@@ -119,6 +124,20 @@ const SIZES = [
 ];
 const KEY = 'tinsCookbook.prefs.v1';
 const WHO_KEY = 'tinsCookbook.who.v1';
+/* The app's own wording is written "English 中文". When the reader has turned
+   Chinese off in Settings, zh() drops the Chinese half, so no button, label,
+   heading or placeholder is left mixing the two scripts. Recipe text and the
+   market card are separate — those carry their own rules. */
+function zh(t){ return S.showCn ? t : ''; }
+/* A family note is kept as one piece of text with the Chinese written after the
+   English, so with Chinese turned off the tail is dropped rather than shown. */
+function noCn(t){
+  if(S.showCn) return t||'';
+  return String(t||'')
+    .replace(/[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]+[\s\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]*/g, '')
+    .replace(/\s{2,}/g,' ').trim();
+}
+
 function whoAmI(){ try{ return localStorage.getItem(WHO_KEY)||''; }catch(e){ return ''; } }
 function setWho(n){ try{ localStorage.setItem(WHO_KEY, n); }catch(e){} }
 function today_(){ return new Date().toISOString().slice(0,10); }
@@ -171,7 +190,7 @@ const S = {
   sheet:false, market:null, toast:'',
   favs:[], shopping:[], size:'m', showCn:true, wake:true, book:DEFAULT_BOOK,
   customs:[], overrides:{}, rev:0,
-  menu:null, menuPick:'',
+  menus:{}, menuDate:'', menuPick:'',
   draft:null, editingId:null, newCourse:null,
   importing:false, importNote:'', importErr:false,
   saving:false, loaded:!GAS, askWho:false, syncing:false,
@@ -241,7 +260,7 @@ const CACHE_KEY = 'cookbook.v6';
 function cacheShared(){
   IDB.put('kv', CACHE_KEY, {
     rev:S.rev, overrides:S.overrides, custom:S.customs,
-    courses:COURSES, menu:S.menu
+    courses:COURSES, menus:S.menus
   });
 }
 function loadCache(){
@@ -251,7 +270,7 @@ function loadCache(){
     S.customs = c.custom || [];
     S.rev = c.rev || 0;
     if(c.courses) setCourses(c.courses);
-    S.menu = c.menu || null;
+    S.menus = c.menus || (c.menu && c.menu.date ? {[c.menu.date]: c.menu} : {});
     return true;
   }).catch(()=>false);
 }
@@ -260,7 +279,8 @@ function loadCache(){
 function applyServer(d){
   if(!d) return false;
   if(d.courses) setCourses(d.courses);
-  S.menu = d.menu || null;
+  if(d.menus) S.menus = d.menus;
+  else if(d.menu && d.menu.date) S.menus = {[d.menu.date]: d.menu};
   if(d.unchanged){ S.rev = d.rev || S.rev; return false; }
   if(d.full){
     S.overrides = d.overrides || {};
@@ -277,23 +297,76 @@ function applyServer(d){
   return true;
 }
 
-function loadShared(){
-  if(!SHARED){ S.loaded=true; return; }
+/* Redrawing the screen under someone's fingers is worse than showing them a
+   slightly old list, so a background update never interrupts typing or cooking.
+   The new dishes are still taken in — they simply appear on the next screen. */
+function safeToRedraw(){
+  if(S.view==='edit' || S.view==='cook' || S.draft || S.newCourse) return false;
+  const a = document.activeElement;
+  if(a && (a.tagName==='INPUT' || a.tagName==='TEXTAREA')) return false;
+  return true;
+}
+
+let syncInFlight = null;
+function loadShared(opts){
+  opts = opts || {};
+  if(!SHARED){ S.loaded=true; return Promise.resolve(false); }
+  /* If a check is already on its way, wait for that one rather than shrugging:
+     a pull that quietly did nothing would be worse than a slightly slow one. */
+  if(syncInFlight) return syncInFlight;
   S.syncing = true;
   const first = !S.rev;
-  if(first) showToast('☁ Loading the family cookbook… 載入中…', true);
-  api('get', {since:S.rev}).then(d=>{
-    hideToast(); S.syncing=false; S.loaded=true;
+  if(first) showToast('☁ Loading the family cookbook…' + zh(' 載入中') + '…', true);
+  syncInFlight = api('get', {since:S.rev}).then(d=>{
+    if(first) hideToast();
+    S.syncing=false; syncInFlight=null; S.loaded=true;
     const changed = applyServer(d);
     cacheShared();
-    render();
-    if(changed && !first) flash('Updated 已更新');
+    if(changed){ syncIdle = 0; } else { syncIdle = Math.min(syncIdle+1, 4); }
+    if(first || opts.manual || (changed && safeToRedraw())) render();
+    else if(changed) renderGridOnly();
+    if(changed && !first) flash('Updated' + zh(' 已更新'));
+    else if(opts.manual) flash('Everything is up to date' + zh(' 已是最新'));
+    scheduleSync();
+    return changed;
   }).catch(()=>{
-    hideToast(); S.syncing=false; S.loaded=true;
-    render();
-    if(first && !S.customs.length && !Object.keys(S.overrides).length) flash("Couldn't reach the family cookbook 未能連接");
-    else flash('Offline — showing the copy on this phone 離線');
+    if(first) hideToast();
+    S.syncing=false; syncInFlight=null; S.loaded=true;
+    if(first || opts.manual) render();
+    if(first && !S.customs.length && !Object.keys(S.overrides).length) flash("Couldn't reach the family cookbook" + zh(" 未能連接") + "");
+    else if(opts.manual) flash('No connection — try again' + zh(' 未能連接'));
+    syncIdle = Math.min(syncIdle+1, 4);
+    scheduleSync();
+    return false;
   });
+  return syncInFlight;
+}
+
+/* ---- checking for other people's changes by itself ----
+
+   A "nothing has changed" answer is a few hundred bytes, so the app can afford
+   to ask often while the family is cooking together. It asks every 20 seconds
+   at first, then eases off towards five minutes as the answers keep coming back
+   empty, and snaps back to 20 seconds the moment something changes or somebody
+   touches the screen. Nothing runs at all while the app is in the background. */
+const SYNC_FAST = 20000, SYNC_SLOW = 300000;
+let syncTimer = null, syncIdle = 0;
+
+function syncWait(){ return Math.min(SYNC_SLOW, SYNC_FAST * Math.pow(2, syncIdle)); }
+function scheduleSync(){
+  clearTimeout(syncTimer);
+  if(!SHARED) return;
+  syncTimer = setTimeout(function(){
+    if(document.visibilityState === 'visible') loadShared();
+    else scheduleSync();
+  }, syncWait());
+}
+/* Someone is using the app right now — look for their family's changes sooner. */
+function syncSoon(){
+  if(!SHARED) return;
+  if(syncIdle === 0 && syncTimer) return;
+  syncIdle = 0;
+  scheduleSync();
 }
 
 /* ---- photos ---- */
@@ -471,7 +544,7 @@ function homeHtml(){
         <div style="font-size:1.42em;letter-spacing:-.02em;margin-top:.4em;line-height:1.1;white-space:nowrap">Tin's Family Cookbook</div>
         <div style="font-size:.86em;font-style:italic;color:#87806F;margin-top:.35em">Made with love for our home kitchen</div>
       </div>
-      <div data-act="goSettings" title="Family settings 家庭設定" style="width:2.6em;height:2.6em;border-radius:50%;background:#F7C948;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;overflow:hidden"><img src="${AVATAR}" alt="" style="width:82%;height:82%;object-fit:contain;display:block"></div>
+      <div data-act="goSettings" title="Family settings${zh(' 家庭設定')}" style="width:2.6em;height:2.6em;border-radius:50%;background:#F7C948;display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;overflow:hidden"><img src="${AVATAR}" alt="" style="width:82%;height:82%;object-fit:contain;display:block"></div>
     </div>
     ${bookTabsHtml()}
     <div style="padding:0 1.25em 1em;display:flex;gap:.6em">
@@ -501,40 +574,87 @@ function bookTabsHtml(){
   return `<div class="ins" style="padding:0 1.25em .85em;display:flex;gap:.5em">${tabs}</div>`;
 }
 
-/* ---- today's menu ---- */
-function menuItems(){
-  if(!S.menu || S.menu.date!==today_()) return [];
-  const all = merged();
-  return (S.menu.items||[]).map(id=>all.find(r=>r.id===id)).filter(Boolean);
+/* ---- the menu for a day ----
+   Meals are planned per day, so the kitchen can be told about tomorrow, or
+   about a birthday next week, without disturbing what is being cooked today. */
+function dayKey(offset){
+  const d = new Date();
+  d.setDate(d.getDate() + (offset||0));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+function dayLabel(key, long){
+  const today = dayKey(0), tomorrow = dayKey(1);
+  if(key === today) return long ? 'Today' + zh(' 今日') : 'Today';
+  if(key === tomorrow) return long ? 'Tomorrow' + zh(' 聽日') : 'Tomorrow';
+  const p = String(key).split('-');
+  const d = new Date(+p[0], +p[1]-1, +p[2]);
+  return d.toLocaleDateString('en-GB', long ? {weekday:'long', day:'numeric', month:'long'} : {weekday:'short', day:'numeric'});
+}
+function menuFor(key){ return S.menus[key||S.menuDate] || null; }
+function menuIds(key){ const m = menuFor(key); return m ? (m.items||[]).slice() : []; }
+function onMenu(id, key){ return menuIds(key).indexOf(id) >= 0; }
+/* Laid out in course order so the helper can read it straight down. */
+function menuItems(key){
+  const ids = menuIds(key);
+  if(!ids.length) return [];
+  const all = merged();
+  const rank = r => { const i = ORDER.indexOf(r.cat); return i<0 ? ORDER.length : i; };
+  return ids.map(id=>all.find(r=>r.id===id)).filter(Boolean)
+            .map((r,i)=>({r:r,i:i}))
+            .sort((a,b)=>{ const d = rank(a.r)-rank(b.r); return d!==0 ? d : a.i-b.i; })
+            .map(x=>x.r);
+}
+/* Days with something planned, today first. */
+function plannedDays(){
+  return Object.keys(S.menus).filter(k=>k >= dayKey(0) && (S.menus[k].items||[]).length).sort();
+}
+
 function todayCardHtml(){
-  if(S.cat!=='all' || S.query.trim()) return '';
-  const items = menuItems();
+  /* Shown whichever course is being filtered — what the kitchen is cooking is
+     just as worth seeing when you are looking only at soups. Hidden only while
+     searching, so the results stay tight. */
+  if(S.query.trim()) return '';
+  const today = dayKey(0);
+  const items = menuItems(today);
+  const ahead = plannedDays().filter(k=>k !== today);
+
+  const aheadRow = ahead.length ? `
+      <div data-act="goMenuOn:${ahead[0]}" class="ins" style="display:flex;align-items:center;justify-content:space-between;gap:.6em;margin-top:${items.length?'.7em':'0'};padding:.6em .2em 0;border-top:${items.length?'1px solid #EADFC2':'none'};font-size:.8em;color:#8A5A33;cursor:pointer">
+        <span>Planned ahead: ${ahead.map(k=>esc(dayLabel(k)+' ('+(S.menus[k].items||[]).length+')')).join(' · ')}</span><span>›</span>
+      </div>` : '';
+
   if(!items.length){
-    return `<div data-act="goMenu" class="ins" style="display:flex;align-items:center;justify-content:space-between;gap:.6em;border:1px dashed #DCCFAF;border-radius:.85em;padding:.8em 1em;margin-bottom:.9em;cursor:pointer;color:#8A5A33;font-size:.88em;font-weight:600">
-      <span>Plan today's menu for the kitchen 安排今日餐單</span><span>›</span></div>`;
+    return `<div style="margin-bottom:.9em">
+      <div data-act="goMenu" class="ins" style="display:flex;align-items:center;justify-content:space-between;gap:.6em;border:1px dashed #DCCFAF;border-radius:.85em;padding:.8em 1em;cursor:pointer;color:#8A5A33;font-size:.88em;font-weight:600">
+        <span>Plan a menu for the kitchen${zh(' 安排餐單')}</span><span>›</span>
+      </div>${ahead.length?`<div style="border:1px dashed #DCCFAF;border-top:none;border-radius:0 0 .85em .85em;padding:0 1em .6em">${aheadRow}</div>`:''}
+    </div>`;
   }
-  const names = items.map(r=>`<div style="display:flex;gap:.5em;align-items:baseline">
-      <span style="color:#8A5A33">·</span>
+
+  const m = menuFor(today);
+  const rows = items.map(r=>`<div style="display:flex;gap:.55em;align-items:baseline;padding:.12em 0">
+      <span class="ins" style="flex:none;font-size:.66em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A33;min-width:5.2em">${esc(courseOf(r.cat).en)}</span>
       <span style="flex:1;min-width:0">${esc(r.en)}${S.showCn&&r.cn?` <span class="tc" style="color:#7A6A52;font-size:.9em">${esc(r.cn)}</span>`:''}</span>
     </div>`).join('');
   return `
     <div style="background:#FFFBEE;border:1px solid #F7C948;border-radius:1em;padding:.9em 1em;margin-bottom:.95em">
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5em">
-        <span class="eyebrow">Today's menu 今日餐單</span>
+        <span class="eyebrow">Today's menu${zh(' 今日餐單')}${m&&m.occasion?' · '+esc(m.occasion):''}</span>
         <span data-act="goMenu" class="ins" style="font-size:.8em;font-weight:700;color:#8A5A33;cursor:pointer">Change</span>
       </div>
-      <div style="margin-top:.55em;font-size:.98em;line-height:1.5">${names}</div>
-      ${S.menu&&S.menu.note?`<div style="margin-top:.5em;font-size:.9em;font-style:italic;color:#6E6357">${esc(S.menu.note)}</div>`:''}
+      <div style="margin-top:.55em;font-size:.98em;line-height:1.45">${rows}</div>
+      ${m&&m.note?`<div style="margin-top:.5em;font-size:.9em;font-style:italic;color:#6E6357">${esc(m.note)}</div>`:''}
       <div class="ins" style="display:flex;gap:.5em;margin-top:.8em">
-        <div data-act="shareMenu" class="ybtn" style="flex:1;border-radius:.7em;padding:.72em;text-align:center;font-size:.86em;font-weight:700">Send to helper 發給姐姐</div>
-        <div data-act="menuToList" style="flex:none;padding:.72em .9em;border:1.5px solid #EADFC2;border-radius:.7em;font-size:.86em;font-weight:700;color:#6B7A45;cursor:pointer">+ Shopping</div>
+        <div data-act="shareMenuOn:${today}" class="ybtn" style="flex:1;border-radius:.7em;padding:.72em;text-align:center;font-size:.86em;font-weight:700">Send to helper${zh(' 發給姐姐')}</div>
+        <div data-act="menuToList:${today}" style="flex:none;padding:.72em .9em;border:1.5px solid #EADFC2;border-radius:.7em;font-size:.86em;font-weight:700;color:#6B7A45;cursor:pointer">+ Shopping</div>
       </div>
-      ${S.menu&&S.menu.by?`<div class="byline" style="margin-top:.55em">Chosen by ${esc(S.menu.by)}</div>`:''}
+      ${m&&m.by?`<div class="byline" style="margin-top:.55em">Chosen by ${esc(m.by)}</div>`:''}
+      ${aheadRow}
     </div>`;
 }
+
 function catLabel(){
-  if(S.cat==='fav') return 'Saved';
+  if(S.cat==='fav') return 'Favourite';
   const c=CATS.find(c=>c.key===S.cat); return c?c.en:'All';
 }
 function gridZoneHtml(){
@@ -545,7 +665,7 @@ function gridZoneHtml(){
     const favC=S.favs.includes(r.id)?'#E5734F':'#DCCFAF';
     const body=`<div style="padding:.62em .75em .78em;min-width:0">
         <div style="font-size:1.05em;line-height:1.2">${esc(r.en)}</div>
-        ${S.showCn?`<div class="tc" style="font-size:.87em;color:#7A6A52;margin-top:.12em">${esc(r.cn)}</div>`:''}
+        ${S.showCn&&r.cn?`<div class="tc" style="font-size:.87em;color:#7A6A52;margin-top:.12em">${esc(r.cn)}</div>`:''}
         <div class="ins" style="font-size:.74em;color:#87806F;margin-top:.38em">${esc(r.time||'')}${r.serves?' · serves '+esc(r.serves):''}</div>
       </div>`;
     if(big) return `<div data-act="open:${r.id}" class="card" style="display:flex;align-items:stretch">
@@ -619,12 +739,12 @@ function recipeHtml(r){
         <div data-act="startCook" class="ybtn" style="flex:1;border-radius:.85em;padding:.95em;text-align:center;font-size:1em;font-weight:700">Start cooking</div>
         ${r.ytid?`<a href="https://www.youtube.com/watch?v=${esc(r.ytid)}" target="_blank" rel="noopener" style="flex:none;padding:0 1em;background:#FFFBEE;border:1.5px solid #EADFC2;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;color:#6E6357">▶ Video</a>`:''}
       </div>
-      <div data-act="${onMenu(r.id)?'menuOff':'menuOn'}:${r.id}" class="ins" style="margin-top:.55em;border:1.5px solid ${onMenu(r.id)?'#6B7A45':'#EADFC2'};background:${onMenu(r.id)?'#F2F5E8':'#FFFBEE'};border-radius:.85em;padding:.8em;text-align:center;font-size:.9em;font-weight:700;color:${onMenu(r.id)?'#6B7A45':'#8A5A33'};cursor:pointer">${onMenu(r.id)?"✓ On today's menu 今日餐單":"+ Cook this today 加入今日餐單"}</div>
+      <div data-act="${onMenu(r.id)?'menuOff':'menuOn'}:${r.id}" class="ins" style="margin-top:.55em;border:1.5px solid ${onMenu(r.id)?'#6B7A45':'#EADFC2'};background:${onMenu(r.id)?'#F2F5E8':'#FFFBEE'};border-radius:.85em;padding:.8em;text-align:center;font-size:.9em;font-weight:700;color:${onMenu(r.id)?'#6B7A45':'#8A5A33'};cursor:pointer">${onMenu(r.id)?"✓ On today's menu" + zh(" 今日餐單") + "":"+ Cook this today" + zh(" 加入今日餐單") + ""}</div>
       <div class="rule" style="margin:1.4em 0 .7em"><span class="eyebrow">Ingredients</span><span class="line"></span><span data-act="addAll" style="font-size:.75em;font-weight:700;color:#6B7A45;cursor:pointer">+ Add all</span></div>
       <div style="display:flex;flex-direction:column;gap:.55em">${ing}</div>
       <div class="rule" style="margin:1.4em 0 .7em"><span class="eyebrow">Method</span><span class="line"></span></div>
       <div style="display:flex;flex-direction:column">${steps}</div>
-      ${r.tip?`<div style="margin-top:1.2em;border-left:2px solid #8A5A33;padding:.2em 0 .2em .9em;font-style:italic;color:#6E6357;font-size:.98em;line-height:1.5">${esc(r.tip)}</div>`:''}
+      ${noCn(r.tip)?`<div style="margin-top:1.2em;border-left:2px solid #8A5A33;padding:.2em 0 .2em .9em;font-style:italic;color:#6E6357;font-size:.98em;line-height:1.5">${esc(noCn(r.tip))}</div>`:''}
     </div>
   </div>`;
 }
@@ -643,7 +763,7 @@ function listHtml(){
   <div style="flex:1;display:flex;flex-direction:column;min-height:0">
     <div style="padding:1.1em 1.25em .8em">
       <div style="font-size:1.72em;line-height:1.1">Shopping list</div>
-      <div class="tc" style="font-size:.9em;color:#7A6A52;margin-top:.15em">買餸清單 · ${S.shopping.length}</div>
+      <div class="tc" style="font-size:.9em;color:#7A6A52;margin-top:.15em">${S.showCn?zh('買餸清單') + ' · ':''}${S.shopping.length} ${S.shopping.length===1?'item':'items'}</div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em">
       <div style="display:flex;flex-direction:column;gap:.55em">${rows}</div>
@@ -664,10 +784,10 @@ function settingsHtml(){
   <div style="flex:1;overflow-y:auto">
     <div style="padding:1.1em 1.25em 2em">
       <div style="font-size:1.72em;line-height:1.1">Reading comfort</div>
-      <div style="font-size:.95em;color:#7A6A52;margin-top:.2em">Only changes this phone. 只影響這部手機。</div>
+      <div style="font-size:.95em;color:#7A6A52;margin-top:.2em">Only changes this phone.${zh(' 只影響這部手機。')}</div>
       <div class="eyebrow" style="margin:1.5em 0 .7em">Text size</div>
       <div style="display:flex;gap:.5em">${sizes}</div>
-      <div class="eyebrow" style="margin:1.5em 0 .7em">Chinese 中文</div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">Chinese${zh(' 中文')}</div>
       <div data-act="toggleCn" class="setrow">
         <div><div style="font-size:1.02em">Show Chinese</div><div style="font-size:.85em;color:#7A6A52">Under the English, smaller</div></div>
         <div class="tgl" style="${tgl(S.showCn)}</div>
@@ -677,23 +797,23 @@ function settingsHtml(){
         <div><div style="font-size:1.02em">Keep screen awake</div><div style="font-size:.85em;color:#7A6A52">Never sleeps in cook mode</div></div>
         <div class="tgl" style="${tgl(S.wake)}</div>
       </div>
-      <div class="eyebrow" style="margin:1.5em 0 .7em">Who's cooking 使用者</div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">Who's cooking${zh(' 使用者')}</div>
       <div data-act="changeWho" class="setrow">
-        <div><div style="font-size:1.02em">${esc(whoAmI()||'Not set yet 未設定')}</div><div style="font-size:.85em;color:#7A6A52">Shown next to dishes you add or change 顯示喺你新增或修改嘅菜式旁</div></div>
+        <div><div style="font-size:1.02em">${esc(whoAmI()||'Not set yet' + zh(' 未設定'))}</div><div style="font-size:.85em;color:#7A6A52">Shown next to dishes you add or change${zh(' 顯示喺你新增或修改嘅菜式旁')}</div></div>
         <span class="ins" style="font-size:.85em;font-weight:700;color:#8A5A33">Change</span>
       </div>
 
-      <div class="eyebrow" style="margin:1.5em 0 .7em">Courses 菜式分類</div>
+      <div class="eyebrow" style="margin:1.5em 0 .7em">Courses${zh(' 菜式分類')}</div>
       <div style="display:flex;flex-wrap:wrap;gap:.45em">
-        ${COURSES.map(c=>`<span class="chip" style="font-size:.85em">${esc(c.en)}<span class="tc" style="opacity:.65;margin-left:.35em">${esc(c.cn)}</span></span>`).join('')}
+        ${COURSES.map(c=>`<span class="chip" style="font-size:.85em">${esc(c.en)}${S.showCn&&c.cn?`<span class="tc" style="opacity:.65;margin-left:.35em">${esc(c.cn)}</span>`:''}</span>`).join('')}
       </div>
-      <div data-act="newCourse" class="addrow">+ Add a course 加分類</div>
-      <div style="font-size:.82em;color:#87806F;margin-top:.4em;line-height:1.45">Shared with everyone. Existing courses stay as they are. 全家共用。</div>
+      <div data-act="newCourse" class="addrow">+ Add a course${zh(' 加分類')}</div>
+      <div style="font-size:.82em;color:#87806F;margin-top:.4em;line-height:1.45">Shared with everyone. Existing courses stay as they are.${zh(' 全家共用。')}</div>
 
       <div class="eyebrow" style="margin:1.5em 0 .7em">Preview</div>
       <div style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;display:flex;gap:.85em;align-items:center;padding:.7em">
         <img src="https://i.ytimg.com/vi/dUq64G_HRyI/hqdefault.jpg" alt="" style="width:4.6em;height:4.6em;object-fit:cover;border-radius:.6em;flex:none">
-        <div style="min-width:0"><div style="font-size:1.3em;line-height:1.2">Clear Broth Beef Brisket</div>${S.showCn?`<div class="tc" style="font-size:1em;color:#7A6A52;margin-top:.1em">清湯牛腩</div>`:''}</div>
+        <div style="min-width:0"><div style="font-size:1.3em;line-height:1.2">Clear Broth Beef Brisket</div>${S.showCn?`<div class="tc" style="font-size:1em;color:#7A6A52;margin-top:.1em">${zh('清湯牛腩')}</div>`:''}</div>
       </div>
       <div style="margin-top:1.6em;text-align:center;font-size:.9em;color:#A0947E;font-style:italic">Made with love for our home kitchen</div>
     </div>
@@ -715,7 +835,7 @@ function editHtml(){
       <input data-in="ing:${i}:0" value="${esc(row[0])}" style="width:2.6em;flex:none;text-align:center;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.7em;padding:.75em 0;font-size:1em;outline:none">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.35em">
         <input data-in="ing:${i}:1" value="${esc(row[1])}" placeholder="Ingredient &amp; amount" class="finput" style="padding:.7em .85em">
-        <input data-in="ing:${i}:2" value="${esc(row[2])}" placeholder="中文" class="finput tc" style="padding:.6em .85em;font-size:.9em;color:#7A6A52;font-family:'Noto Serif TC',serif">
+        <input data-in="ing:${i}:2" value="${esc(row[2])}" placeholder="${zh('中文')}" class="finput tc" style="padding:.6em .85em;font-size:.9em;color:#7A6A52;font-family:'Noto Serif TC',serif">
       </div>
       <span data-act="remIng:${i}" style="flex:none;color:#B0A28C;font-size:1.2em;padding:.5em .25em;cursor:pointer">×</span>
     </div>`).join('');
@@ -724,10 +844,10 @@ function editHtml(){
       <span class="ins" style="flex:none;font-size:.8em;font-weight:700;color:#8A5A33;padding-top:.9em">${String(i+1).padStart(2,'0')}</span>
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:.35em">
         <textarea data-in="step:${i}:0" rows="2" placeholder="What to do" class="f2">${esc(row[0])}</textarea>
-        <textarea data-in="step:${i}:1" rows="2" placeholder="中文步驟" class="f2 tc" style="padding:.6em .85em;font-size:.9em;color:#7A6A52;font-family:'Noto Serif TC',serif;line-height:1.5">${esc(row[1])}</textarea>
+        <textarea data-in="step:${i}:1" rows="2" placeholder="${zh('中文步驟')}" class="f2 tc" style="padding:.6em .85em;font-size:.9em;color:#7A6A52;font-family:'Noto Serif TC',serif;line-height:1.5">${esc(row[1])}</textarea>
         <label class="ins" style="display:flex;align-items:center;gap:.5em;font-size:.78em;color:#8A5A33;cursor:pointer">
           <input type="file" accept="image/*" data-in="stepphoto:${i}" style="display:none">
-          <span style="border:1px dashed #DCCFAF;border-radius:.5em;padding:.35em .7em">${row[2]?'✓ Photo added 已有相片':'📷 Add a photo of this step 加步驟相片'}</span>
+          <span style="border:1px dashed #DCCFAF;border-radius:.5em;padding:.35em .7em">${row[2]?'✓ Photo added' + zh(' 已有相片'):'📷 Add a photo of this step' + zh(' 加步驟相片')}</span>
           ${row[2]?`<span data-act="remStepPhoto:${i}" style="color:#B0A28C">remove</span>`:''}
         </label>
         ${row[2]?imgTag(row[2],'stepimg','max-height:8em;object-fit:cover'):''}
@@ -755,9 +875,9 @@ function editHtml(){
       </div>
       <div class="eyebrow" style="margin:1.4em 0 .6em">The dish</div>
       <input data-in="den" value="${esc(d.en)}" placeholder="Name in English" class="finput" style="font-size:1.05em;font-family:'Newsreader','Noto Serif TC',serif">
-      <input data-in="dcn" value="${esc(d.cn)}" placeholder="中文名（留空會自動翻譯）" class="finput tc" style="font-size:.95em;margin-top:.5em;color:#7A6A52;font-family:'Noto Serif TC',serif">
+      <input data-in="dcn" value="${esc(d.cn)}" placeholder="${zh('中文名（留空會自動翻譯）')}" class="finput tc" style="font-size:.95em;margin-top:.5em;color:#7A6A52;font-family:'Noto Serif TC',serif">
       <div style="display:flex;flex-wrap:wrap;gap:.45em;margin-top:.7em">${cats}<span data-act="newCourse" style="padding:.5em .95em;border-radius:1.3em;background:#FFFBEE;color:#8A5A33;border:1px dashed #DCCFAF;font-size:.95em;cursor:pointer">+ New</span></div>
-      <div class="eyebrow" style="margin:1.1em 0 .5em">Whose shelf 邊個嘅</div>
+      <div class="eyebrow" style="margin:1.1em 0 .5em">Whose shelf${zh(' 邊個嘅')}</div>
       <div style="display:flex;gap:.45em">${books}</div>
       <div style="display:flex;gap:.5em;margin-top:.7em">
         <input data-in="dtime" value="${esc(d.time)}" placeholder="30 min" class="finput" style="flex:1;min-width:0;width:auto">
@@ -800,7 +920,7 @@ function cookHtml(r){
     </div>
     <div style="display:flex;gap:.6em;padding:1em 1.25em 1.6em">
       <div data-act="prevStep" style="flex:none;width:4.4em;border:2px solid #63635B;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:1.4em;cursor:pointer">‹</div>
-      <div data-act="nextStep" class="ybtn ins" style="flex:1;border-radius:.85em;padding:1.15em;text-align:center;font-size:1.1em;font-weight:700">${idx>=steps.length-1?'Done — 好味！':'Next step'}</div>
+      <div data-act="nextStep" class="ybtn ins" style="flex:1;border-radius:.85em;padding:1.15em;text-align:center;font-size:1.1em;font-weight:700">${idx>=steps.length-1?(S.showCn?'Done —' + zh(' 好味！'):'Done!'):'Next step'}</div>
     </div>
   </div>`;
 }
@@ -829,7 +949,7 @@ function sheetHtml(){
     const n=c.key==='all'?shelf.length:shelf.filter(r=>r.cat===c.key).length;
     const on=S.cat===c.key;
     return `<div data-act="pickCat:${c.key}" class="crow">
-      <span style="font-size:1.12em;color:${on?'#8A5A33':'#4A4A46'}">${c.en} <span class="tc" style="font-size:.82em;color:${on?'#8A5A33':'#7A6A52'}">${c.cn}</span></span>
+      <span style="font-size:1.12em;color:${on?'#8A5A33':'#4A4A46'}">${esc(c.en)}${S.showCn&&c.cn?` <span class="tc" style="font-size:.82em;color:${on?'#8A5A33':'#7A6A52'}">${esc(c.cn)}</span>`:''}</span>
       <span style="font-size:.9em;color:${on?'#8A5A33':'#4A4A46'}">${on?'✓':n}</span>
     </div>`;
   }).join('');
@@ -857,95 +977,152 @@ function marketHtml(){
 }
 
 
-/* ============ today's menu ============
-   Whoever plans the meal taps dishes here. The menu is saved with everyone
-   else's cookbook data, so it appears on the helper's phone by itself, and the
-   Send button hands the same list to WhatsApp for the ones who prefer that. */
-
-function menuIds(){ return (S.menu && S.menu.date===today_()) ? (S.menu.items||[]).slice() : []; }
-function onMenu(id){ return menuIds().indexOf(id)>=0; }
+/* ============ planning the meals ============
+   Whoever plans taps dishes here, for today or for any day ahead. The plan is
+   saved with everyone else's cookbook data, so it appears on the helper's phone
+   by itself, and Send hands the same list to WhatsApp for those who prefer it. */
 
 function menuHtml(){
-  const chosen = menuItems();
+  const key = S.menuDate || dayKey(0);
+  const m = menuFor(key);
+  const chosen = menuItems(key);
   const q = S.menuPick.trim().toLowerCase();
-  const pool = merged().filter(r=>!onMenu(r.id) && matches(r,q)).slice(0, q?40:24);
+  const pool = merged().filter(r=>!onMenu(r.id, key) && matches(r,q));
+
+  /* A week of days to plan into, plus any date already planned further out. */
+  const days = [];
+  for(let i=0;i<8;i++) days.push(dayKey(i));
+  plannedDays().forEach(k=>{ if(days.indexOf(k)<0) days.push(k); });
+  days.sort();
+  const dayChips = days.map(k=>{
+    const on = k===key;
+    const n = (S.menus[k]&&S.menus[k].items||[]).length;
+    return `<span data-act="pickMenuDay:${k}" class="daychip" style="background:${on?'#F7C948':'#FFFBEE'};border-color:${on?'#F7C948':'#EADFC2'};color:${on?'#4A4A46':'#7A6A52'};font-weight:${on?700:600}">${esc(dayLabel(k))}${n?`<span style="opacity:.65;margin-left:.3em">${n}</span>`:''}</span>`;
+  }).join('');
+
   const chosenRows = chosen.map((r,i)=>`
     <div style="display:flex;align-items:center;gap:.7em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.7em .85em">
-      <span class="ins" style="font-size:.75em;font-weight:700;color:#8A5A33;flex:none">${i+1}</span>
+      <span class="ins" style="flex:none;font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A33;width:4.6em;line-height:1.3">${esc(courseOf(r.cat).en)}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:1em;line-height:1.25">${esc(r.en)}</div>
         ${S.showCn&&r.cn?`<div class="tc" style="font-size:.87em;color:#7A6A52">${esc(r.cn)}</div>`:''}
-        <div class="ins" style="font-size:.72em;color:#87806F;margin-top:.2em">${esc(courseOf(r.cat).en)}${r.time?' · '+esc(r.time):''}</div>
+        <div class="ins" style="font-size:.72em;color:#87806F;margin-top:.2em">${esc(bookOf(r))}${r.time?' · '+esc(r.time):''}</div>
       </div>
       <span data-act="menuOff:${r.id}" style="color:#B0A28C;font-size:1.15em;padding:0 .3em;cursor:pointer">×</span>
     </div>`).join('');
-  const poolRows = pool.map(r=>`
+
+  const poolRow = r=>`
     <div data-act="menuOn:${r.id}" style="display:flex;align-items:center;gap:.7em;padding:.6em .2em;border-bottom:1px solid #EADFC2;cursor:pointer">
       <div${phMark(r.img)} style="width:2.6em;height:2.6em;border-radius:.5em;flex:none;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
       <div style="flex:1;min-width:0">
         <div style="font-size:.98em;line-height:1.2">${esc(r.en)}</div>
-        <div class="ins" style="font-size:.72em;color:#87806F">${esc(bookOf(r))} · ${esc(courseOf(r.cat).en)}</div>
+        ${S.showCn&&r.cn?`<div class="tc" style="font-size:.85em;color:#7A6A52">${esc(r.cn)}</div>`:''}
+        <div class="ins" style="font-size:.72em;color:#87806F">${esc(bookOf(r))}${r.time?' · '+esc(r.time):''}</div>
       </div>
-      <span class="ins" style="color:#8A5A33;font-weight:700;font-size:.9em">+</span>
-    </div>`).join('');
+      <span class="ins" style="color:#8A5A33;font-weight:700;font-size:1.05em">+</span>
+    </div>`;
+  /* Every dish in the cookbook is here, in course order, the same way the Cook
+     tab is laid out, so a whole meal can be built straight down the list. */
+  const known = COURSES.map(c=>c.key);
+  const groups = COURSES
+    .map(c=>({course:c, items:pool.filter(r=>r.cat===c.key)}))
+    .concat([{course:{key:'_rest', en:'Everything else', cn:'其他'},
+              items:pool.filter(r=>known.indexOf(r.cat)<0)}])
+    .filter(g=>g.items.length);
+  const poolRows = groups.map(g=>`
+    <div class="rule" style="margin:1.1em 0 .1em">
+      <span class="eyebrow" style="font-size:.64em">${esc(g.course.en)}${S.showCn&&g.course.cn?` <span class="tc" style="opacity:.7">${esc(g.course.cn)}</span>`:''}</span>
+      <span class="line"></span>
+      <span class="eyebrow" style="font-size:.64em;opacity:.55">${g.items.length}</span>
+    </div>
+    ${g.items.map(poolRow).join('')}`).join('');
+
   return `
   <div style="flex:1;display:flex;flex-direction:column;min-height:0">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:.75em;padding:1em 1.25em .8em;border-bottom:1px solid #EADFC2;flex:none">
       <span data-act="goHome" class="ins" style="font-size:.92em;font-weight:600;color:#87806F;cursor:pointer;padding:.3em .2em">‹ Back</span>
-      <span style="font-size:1.05em">Today's menu</span>
+      <span style="font-size:1.05em">${esc(dayLabel(key))}'s menu</span>
       <span data-act="shareMenu" class="ins" style="font-size:.92em;font-weight:700;color:${chosen.length?'#8A5A33':'#C4B99E'};cursor:pointer;padding:.3em .2em">Send</span>
     </div>
     <div style="flex:1;overflow-y:auto;padding:1em 1.25em 2.5em">
-      <div style="font-size:.92em;color:#7A6A52;line-height:1.5">Pick what the kitchen should cook today. Everyone in the family sees this list as soon as you add to it. 全家即時睇到。</div>
-      ${chosen.length?`<div style="display:flex;flex-direction:column;gap:.5em;margin-top:1em">${chosenRows}</div>`:`<div style="margin-top:1em;text-align:center;border:1px dashed #DCCFAF;border-radius:.8em;padding:1.4em 1em;color:#87806F;font-size:.95em">Nothing chosen yet — tap a dish below.</div>`}
+      <div class="eyebrow" style="margin-bottom:.5em">Which day${zh(' 邊一日')}</div>
+      <div class="ins" style="display:flex;gap:.4em;overflow-x:auto;padding-bottom:.3em;-webkit-overflow-scrolling:touch">${dayChips}</div>
+      <label class="ins" style="display:flex;align-items:center;gap:.5em;margin-top:.5em;font-size:.8em;color:#8A5A33;cursor:pointer">
+        <span style="border:1px dashed #DCCFAF;border-radius:.5em;padding:.4em .7em">📅 Another date${zh(' 其他日子')}</span>
+        <input type="date" data-in="menudate" value="${esc(key)}" min="${esc(dayKey(0))}" style="border:none;background:transparent;color:#8A5A33;font-size:.85em;outline:none">
+      </label>
+
+      <div style="margin-top:1em;font-size:.92em;color:#7A6A52;line-height:1.5">Pick what the kitchen should cook on <b>${esc(dayLabel(key, true))}</b>. Everyone in the family sees it straight away.${zh(' 全家即時睇到。')}</div>
+
+      ${chosen.length?`<div style="display:flex;flex-direction:column;gap:.5em;margin-top:1em">${chosenRows}</div>`:`<div style="margin-top:1em;text-align:center;border:1px dashed #DCCFAF;border-radius:.8em;padding:1.4em 1em;color:#87806F;font-size:.95em">Nothing chosen for this day yet — tap a dish below.</div>`}
       ${chosen.length?`
-      <textarea data-in="menunote" rows="2" placeholder="A note for the kitchen 給廚房嘅備註" class="f2" style="margin-top:.7em">${esc((S.menu&&S.menu.note)||'')}</textarea>
+      <input data-in="menuoccasion" value="${esc((m&&m.occasion)||'')}" placeholder="Special occasion? e.g. Grandma's birthday${zh(' 特別日子')}" class="finput" style="margin-top:.7em;font-size:.95em">
+      <textarea data-in="menunote" rows="2" placeholder="A note for the kitchen${zh(' 給廚房嘅備註')}" class="f2" style="margin-top:.5em">${esc((m&&m.note)||'')}</textarea>
       <div class="ins" style="display:flex;gap:.5em;margin-top:.7em">
-        <div data-act="shareMenu" class="ybtn" style="flex:1;border-radius:.8em;padding:.9em;text-align:center;font-size:.95em;font-weight:700">Send to helper 發給姐姐</div>
-        <div data-act="menuToList" style="flex:none;padding:.9em 1em;border:1.5px solid #EADFC2;border-radius:.8em;font-size:.9em;font-weight:700;color:#6B7A45;cursor:pointer">+ Shopping</div>
+        <div data-act="shareMenu" class="ybtn" style="flex:1;border-radius:.8em;padding:.9em;text-align:center;font-size:.95em;font-weight:700">Send to helper${zh(' 發給姐姐')}</div>
+        <div data-act="menuToList:${key}" style="flex:none;padding:.9em 1em;border:1.5px solid #EADFC2;border-radius:.8em;font-size:.9em;font-weight:700;color:#6B7A45;cursor:pointer">+ Shopping</div>
       </div>
-      <div data-act="menuClear" class="ins" style="margin-top:.6em;text-align:center;font-size:.85em;font-weight:600;color:#A0947E;cursor:pointer;padding:.6em">Clear today's menu</div>`:''}
+      <div data-act="menuClear" class="ins" style="margin-top:.6em;text-align:center;font-size:.85em;font-weight:600;color:#A0947E;cursor:pointer;padding:.6em">Clear this day's menu</div>`:''}
+
       <div class="rule" style="margin:1.6em 0 .5em"><span class="eyebrow">Add a dish</span><span class="line"></span></div>
-      <input data-in="menupick" value="${esc(S.menuPick)}" placeholder="Search all shelves 搜尋" class="finput">
-      <div style="margin-top:.5em">${poolRows}</div>
+      <input data-in="menupick" value="${esc(S.menuPick)}" placeholder="Search all shelves${zh(' 搜尋')}" class="finput">
+      <div class="ins" style="font-size:.75em;color:#87806F;margin-top:.5em">${pool.length} ${pool.length===1?'dish':'dishes'} to choose from, from every shelf${zh(' 全部菜式')}</div>
+      <div>${poolRows}</div>
       ${pool.length===0?`<div style="text-align:center;padding:1.5em;color:#87806F;font-size:.95em">Nothing else matches.</div>`:''}
     </div>
   </div>`;
 }
 
-function setMenu(ids, note){
-  const m = {date:today_(), items:ids, note:(note!==undefined?note:((S.menu&&S.menu.note)||'')), by:whoAmI()||''};
-  S.menu = Object.assign({}, m);
+function setMenu(key, ids, extra){
+  extra = extra || {};
+  const was = menuFor(key) || {};
+  const m = {
+    date: key,
+    items: ids,
+    note: extra.note !== undefined ? extra.note : (was.note || ''),
+    occasion: extra.occasion !== undefined ? extra.occasion : (was.occasion || ''),
+    by: whoAmI() || was.by || ''
+  };
+  if(ids.length) S.menus[key] = Object.assign({}, was, m);
+  else delete S.menus[key];
   cacheShared();
-  if(SHARED) api('menu', m).then(saved=>{ S.menu = saved; cacheShared(); }).catch(()=>flash("Couldn't share the menu — try again 未能同步"));
+  if(SHARED) api('menu', m)
+    .then(res=>{ if(res && res.menus) S.menus = res.menus; cacheShared(); })
+    .catch(()=>flash("Couldn't share the menu — try again" + zh(" 未能同步") + ""));
 }
 
 /* The message the helper actually receives. */
-function menuText(){
-  const items = menuItems();
-  const when = new Date().toLocaleDateString('en-GB',{weekday:'short', day:'numeric', month:'short'});
-  const lines = items.map((r,i)=>{
-    const bits = [r.en];
-    if(r.cn) bits.push(r.cn);
-    const extra = [r.time, r.serves?('serves '+r.serves):''].filter(Boolean).join(' · ');
-    return (i+1)+'. ' + bits.join(' ') + (extra?('  ('+extra+')'):'');
+function menuText(key){
+  const m = menuFor(key);
+  const items = menuItems(key);
+  const p = String(key).split('-');
+  const when = new Date(+p[0], +p[1]-1, +p[2])
+    .toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+  const head = dayLabel(key) === 'Today' ? when : (dayLabel(key) + ' · ' + when);
+
+  const lines = [];
+  let last = '';
+  items.forEach((r,i)=>{
+    const c = courseOf(r.cat);
+    if(c.en !== last){ last = c.en; lines.push('', (c.en + (c.cn ? ' ' + c.cn : '')).toUpperCase()); }
+    const extra = [r.time, r.serves ? ('serves ' + r.serves) : ''].filter(Boolean).join(' · ');
+    lines.push('· ' + r.en + (r.cn ? ' ' + r.cn : '') + (extra ? '  (' + extra + ')' : ''));
   });
-  const note = (S.menu&&S.menu.note) ? '\n' + S.menu.note + '\n' : '';
-  return "Tin's Family Cookbook — today's menu 今日餐單\n" + when + '\n\n' +
-         lines.join('\n') + '\n' + note +
-         (APP_LINK ? '\nFull recipes 完整食譜: ' + APP_LINK : '');
+
+  return "Tin's Family Cookbook — menu" + zh(" 餐單") + "\n" + head +
+         ((m && m.occasion) ? '\n' + m.occasion : '') + '\n' +
+         lines.join('\n') + '\n' +
+         ((m && m.note) ? '\n' + m.note + '\n' : '') +
+         (APP_LINK ? '\nFull recipes' + zh(' 完整食譜') + ': ' + APP_LINK : '');
 }
-function shareMenu(){
-  const items = menuItems();
-  if(!items.length){ flash('Choose a dish first 請先揀菜'); return; }
-  const text = menuText();
-  if(navigator.share){
-    navigator.share({title:"Today's menu 今日餐單", text:text}).catch(()=>{});
-    return;
-  }
+function shareMenu(key){
+  key = key || S.menuDate || dayKey(0);
+  if(!menuItems(key).length){ flash('Choose a dish first' + zh(' 請先揀菜')); return; }
+  const text = menuText(key);
+  if(navigator.share){ navigator.share({title:'Menu' + zh(' 餐單'), text:text}).catch(()=>{}); return; }
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text)
-      .then(()=>flash('Menu copied — paste it to the helper 已複製'))
+      .then(()=>flash('Menu copied — paste it to the helper' + zh(' 已複製')))
       .catch(()=>openWhatsApp(text));
     return;
   }
@@ -953,6 +1130,63 @@ function shareMenu(){
 }
 function openWhatsApp(text){
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+/* ============ pull down to update ============
+   Two people cooking from the same cookbook want to see each other's changes.
+   The app checks by itself (above), but a deliberate tug is quicker to trust,
+   so dragging the list down past its top asks the server there and then. */
+const PULL_TRIGGER = 68, PULL_MAX = 110;
+let pull = { on:false, y0:0, dist:0 };
+
+function scrollerFor(node){
+  let el = node;
+  while(el && el.nodeType === 1 && el.id !== 'app'){
+    if(el.scrollHeight > el.clientHeight + 4){
+      const oy = getComputedStyle(el).overflowY;
+      if(oy === 'auto' || oy === 'scroll') return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+function pullPaint(dist, state){
+  const box = document.getElementById('ptrbox');
+  if(!box) return;
+  if(!dist && state !== 'busy'){ box.innerHTML = ''; return; }
+  const shown = Math.min(dist, PULL_MAX);
+  const label = state === 'busy' ? 'Updating…' + zh(' 更新中')
+              : state === 'go'   ? 'Let go to update' + zh(' 放手更新')
+                                 : 'Pull down to update' + zh(' 下拉更新');
+  box.innerHTML = '<div class="ptrpill" style="transform:translate(-50%,' + Math.round(shown * 0.55 + 8) +
+                  'px);opacity:' + Math.min(1, shown / 45).toFixed(2) + '">' + label + '</div>';
+}
+function pullAllowed(){
+  return SHARED && !S.saving && S.view !== 'cook' && S.view !== 'edit' && !S.newCourse && !S.askWho;
+}
+function pullStart(e){
+  pull.on = false;
+  if(!pullAllowed() || !e.touches || e.touches.length !== 1) return;
+  const sc = scrollerFor(e.target);
+  if(sc && sc.scrollTop > 0) return;
+  pull.on = true; pull.y0 = e.touches[0].clientY; pull.dist = 0;
+}
+function pullMove(e){
+  if(!pull.on) return;
+  const d = e.touches[0].clientY - pull.y0;
+  if(d <= 0){ if(pull.dist){ pull.dist = 0; pullPaint(0); } return; }
+  /* Resist a little, so it feels like paper rather than elastic. */
+  pull.dist = d < PULL_MAX ? d : PULL_MAX + (d - PULL_MAX) * 0.25;
+  if(e.cancelable) e.preventDefault();
+  pullPaint(pull.dist, pull.dist >= PULL_TRIGGER ? 'go' : 'pull');
+}
+function pullEnd(){
+  if(!pull.on) return;
+  const go = pull.dist >= PULL_TRIGGER;
+  pull.on = false; pull.dist = 0;
+  if(!go){ pullPaint(0); return; }
+  pullPaint(PULL_TRIGGER, 'busy');
+  loadShared({manual:true}).then(function(){ pullPaint(0); });
 }
 
 /* ============ render ============ */
@@ -977,6 +1211,7 @@ function render(){
     + (S.market?marketHtml():'')
     + (S.askWho?whoHtml():'')
     + (S.newCourse?courseModalHtml():'')
+    + `<div id="ptrbox"></div>`
     + `<div id="toastbox"></div>`;
   renderToast();
   paintPhotos();
@@ -988,10 +1223,10 @@ function whoHtml(){
     <div class="whocard">
       <div class="eyebrow">Who's cooking?</div>
       <div style="font-size:1.35em;line-height:1.2;margin-top:.5em">What's your name?</div>
-      <div class="tc" style="font-size:.95em;color:#7A6A52;margin-top:.25em">請問點稱呼？</div>
-      <div style="font-size:.88em;color:#87806F;margin-top:.7em;line-height:1.45">So the family can see who added or changed a dish. Only saved on this phone. 只儲存喺呢部手機。</div>
-      <input id="whoInput" value="${esc(whoAmI())}" placeholder="Your name 你嘅名" class="finput" style="margin-top:1em;text-align:center;font-size:1.05em">
-      <div data-act="saveWho" class="ybtn ins" style="margin-top:.7em;border-radius:.85em;padding:.85em;text-align:center;font-weight:700">Done 完成</div>
+      <div class="tc" style="font-size:.95em;color:#7A6A52;margin-top:.25em">${zh('請問點稱呼？')}</div>
+      <div style="font-size:.88em;color:#87806F;margin-top:.7em;line-height:1.45">So the family can see who added or changed a dish. Only saved on this phone.${zh(' 只儲存喺呢部手機。')}</div>
+      <input id="whoInput" value="${esc(whoAmI())}" placeholder="Your name${zh(' 你嘅名')}" class="finput" style="margin-top:1em;text-align:center;font-size:1.05em">
+      <div data-act="saveWho" class="ybtn ins" style="margin-top:.7em;border-radius:.85em;padding:.85em;text-align:center;font-weight:700">Done${zh(' 完成')}</div>
     </div>
   </div>`;
 }
@@ -1004,10 +1239,10 @@ function courseModalHtml(){
     <div class="whocard">
       <div class="eyebrow">New course</div>
       <div style="font-size:1.3em;line-height:1.2;margin-top:.5em">Add a course</div>
-      <div style="font-size:.88em;color:#87806F;margin-top:.6em;line-height:1.45">Like Noodles, Steamed, or Party. Everyone in the family gets it. 全家共用。</div>
+      <div style="font-size:.88em;color:#87806F;margin-top:.6em;line-height:1.45">Like Noodles, Steamed, or Party. Everyone in the family gets it.${zh(' 全家共用。')}</div>
       <input id="courseEn" value="${esc(c.en)}" placeholder="Name in English" class="finput" style="margin-top:1em;text-align:center">
-      <input id="courseCn" value="${esc(c.cn)}" placeholder="中文（留空會自動翻譯）" class="finput tc" style="margin-top:.5em;text-align:center;color:#7A6A52;font-family:'Noto Serif TC',serif">
-      <div data-act="saveCourse" class="ybtn ins" style="margin-top:.8em;border-radius:.85em;padding:.85em;text-align:center;font-weight:700">${S.saving?'Saving…':'Add course 加入'}</div>
+      <input id="courseCn" value="${esc(c.cn)}" placeholder="${zh('中文（留空會自動翻譯）')}" class="finput tc" style="margin-top:.5em;text-align:center;color:#7A6A52;font-family:'Noto Serif TC',serif">
+      <div data-act="saveCourse" class="ybtn ins" style="margin-top:.8em;border-radius:.85em;padding:.85em;text-align:center;font-weight:700">${S.saving?'Saving…':'Add course' + zh(' 加入')}</div>
       <div data-act="closeCourse" class="ins" style="margin-top:.5em;font-size:.88em;color:#A0947E;cursor:pointer;padding:.5em">Cancel</div>
     </div>
   </div>`;
@@ -1034,17 +1269,17 @@ function saveCourse(){
   const en=(document.getElementById('courseEn')||{}).value||'';
   const cn=(document.getElementById('courseCn')||{}).value||'';
   const name=en.trim()||cn.trim();
-  if(!name){ flash('Give the course a name 請輸入名稱'); return; }
+  if(!name){ flash('Give the course a name' + zh(' 請輸入名稱')); return; }
   let key=name.toLowerCase().replace(/[^a-z0-9]/g,'');
   if(!key) key='course'+(COURSES.length+1);
-  if(COURSES.some(c=>c.key===key)){ flash('That course already exists 已經有呢個分類'); S.newCourse=null; render(); return; }
+  if(COURSES.some(c=>c.key===key)){ flash('That course already exists' + zh(' 已經有呢個分類')); S.newCourse=null; render(); return; }
   const next=COURSES.concat([{key:key, en:en.trim()||cn.trim(), cn:cn.trim()}]);
   if(!SHARED){ setCourses(next); S.newCourse=null; render(); flash('Course added'); return; }
   S.saving=true; render();
   api('courses', next).then(list=>{
     S.saving=false; setCourses(list); S.newCourse=null;
     if(S.draft) S.draft.cat=key;
-    cacheShared(); render(); flash('Course added for everyone 已為全家加入');
+    cacheShared(); render(); flash('Course added for everyone' + zh(' 已為全家加入'));
   }).catch(()=>{ S.saving=false; render(); flash("Couldn't add the course — check the connection"); });
 }
 
@@ -1113,9 +1348,9 @@ async function saveDraft(){
       if(saved.rev) S.rev=Math.max(S.rev, saved.rev);
       cacheShared();
       S.view='recipe'; S.recipeId=saved.id; S.step=0; S.draft=null; S.editingId=null;
-      render(); flash(id?'Saved for everyone 已為全家儲存':'Added to the cookbook 已加入食譜');
+      render(); flash(id?'Saved for everyone' + zh(' 已為全家儲存'):'Added to the cookbook' + zh(' 已加入食譜'));
     }).catch(()=>{
-      S.saving=false; render(); flash("Couldn't save — check the connection 儲存失敗");
+      S.saving=false; render(); flash("Couldn't save — check the connection" + zh(" 儲存失敗") + "");
     });
   }else{
     flash('Translating…');
@@ -1131,14 +1366,14 @@ async function saveDraft(){
 }
 function deleteDish(){
   const id=S.editingId; if(!id) return;
-  if(!confirm('Remove this dish from the family cookbook? 確定移除呢道菜？')) return;
+  if(!confirm('Remove this dish from the family cookbook?' + zh(' 確定移除呢道菜？'))) return;
   const done=()=>{ S.view='home'; S.recipeId=null; S.draft=null; S.editingId=null; render(); flash('Removed'); };
   if(SHARED){
-    showToast('☁ Removing… 刪除中…', true);
+    showToast('☁ Removing…' + zh(' 刪除中') + '…', true);
     api('delete', id).then(()=>{
       if(/^[cu]/.test(id)) S.customs=S.customs.filter(c=>c.id!==id); else S.overrides[id]={del:true};
       cacheShared(); done();
-    }).catch(()=>flash("Couldn't remove — try again 刪除失敗"));
+    }).catch(()=>flash("Couldn't remove — try again" + zh(" 刪除失敗") + ""));
   }else{
     if(S.customs.some(c=>c.id===id)) S.customs=S.customs.filter(c=>c.id!==id);
     else S.overrides[id]='deleted';
@@ -1167,11 +1402,11 @@ function runImport(){
   S.importing=true; S.importErr=false; S.importNote='Reading the page… this takes a few seconds.'; render();
   if(!SHARED){
     S.importing=false;
-    setImportNote('Automatic filling works in the family app — open the shared link to use it. 自動填寫請用家庭版連結。', true);
+    setImportNote('Automatic filling works in the family app — open the shared link to use it.' + zh(' 自動填寫請用家庭版連結。'), true);
     return;
   }
   api('extract', url).then(out=>applyImport(out,url))
-    .catch(()=>{ S.importing=false; setImportNote("That didn't work. Try again, or fill it in by hand below. 請再試或自行輸入。", true); });
+    .catch(()=>{ S.importing=false; setImportNote("That didn't work. Try again, or fill it in by hand below." + zh(" 請再試或自行輸入。") + "", true); });
 }
 function applyImport(out, url){
   S.importing=false;
@@ -1181,8 +1416,8 @@ function applyImport(out, url){
     if(out && out.img && !d.img) d.img=out.img;
     const map={
       'not-configured':"Automatic filling isn't available here. Type the recipe in below.",
-      'unreadable': out&&out.img ? "Got the photo, but couldn't read the recipe — some sites block it. Type it in below." : "Couldn't open that link — some sites block it. Try another, or type it in below. 打唔開個連結。",
-      'no-recipe':"That page doesn't publish a recipe we can read. Try the recipe's own page (not a listing or a video), or type it in below. 該頁沒有可讀取的食譜資料。",
+      'unreadable': out&&out.img ? "Got the photo, but couldn't read the recipe — some sites block it. Type it in below." : "Couldn't open that link — some sites block it. Try another, or type it in below." + zh(" 打唔開個連結。") + "",
+      'no-recipe':"That page doesn't publish a recipe we can read. Try the recipe's own page (not a listing or a video), or type it in below." + zh(" 該頁沒有可讀取的食譜資料。") + "",
       'api':'Something went wrong reading that page. Try again in a minute.',
       'parse':"That didn't work. Try again, or fill it in by hand below.",
     };
@@ -1203,48 +1438,91 @@ function applyImport(out, url){
     steps:steps.length?steps.concat([['','','']]):d.steps,
   });
   if(out.partial){
-    setImportNote('Videos rarely publish their recipe, so only the name and photo were filled in — type the ingredients and steps below. 影片通常沒有食譜資料，請自行輸入材料同步驟。', true);
+    setImportNote('Videos rarely publish their recipe, so only the name and photo were filled in — type the ingredients and steps below.' + zh(' 影片通常沒有食譜資料，請自行輸入材料同步驟。'), true);
   } else {
-    setImportNote('Filled in '+ing.length+' ingredients and '+steps.length+' steps — please check before saving. 已填入，儲存前請檢查。', false);
+    setImportNote('Filled in '+ing.length+' ingredients and '+steps.length+' steps — please check before saving.' + zh(' 已填入，儲存前請檢查。'), false);
   }
 }
 
-/* ============ photo ============ */
+/* ============ photos ============
+
+   A photo straight off a modern phone is several megabytes and perhaps 4000
+   pixels wide. The cookbook shows it in a column 440 points across, so almost
+   all of that is thrown away on screen while still being carried up to Drive
+   and back down to every phone forever.
+
+   So each photo is shrunk here, before it is ever sent. The size below is
+   generous for a sharp screen; the byte budget is the real promise — if a photo
+   still comes out too heavy the quality and then the size step down until it
+   fits. Budgets are in characters of the encoded photo, which is about a third
+   larger than the file itself.                                               */
+const COVER_SIDE = 800, COVER_BUDGET = 150000;   /* ~110 KB */
+const STEP_SIDE  = 520, STEP_BUDGET  =  85000;   /* ~62 KB  */
+
+function shrinkPhoto(file, maxSide, budget){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onerror = ()=>reject(new Error('unreadable'));
+    reader.onload = function(ev){
+      const img = new Image();
+      img.onerror = ()=>reject(new Error('not an image'));
+      img.onload = function(){
+        const longest = Math.max(img.width, img.height) || 1;
+        let side = Math.min(maxSide, longest);
+        let out = '';
+        for(let pass = 0; pass < 6; pass++){
+          const sc = Math.min(1, side / longest);
+          const cv = document.createElement('canvas');
+          cv.width  = Math.max(1, Math.round(img.width  * sc));
+          cv.height = Math.max(1, Math.round(img.height * sc));
+          const cx = cv.getContext('2d');
+          cx.fillStyle = '#FFFFFF';                 /* JPEG cannot hold see-through */
+          cx.fillRect(0, 0, cv.width, cv.height);
+          cx.drawImage(img, 0, 0, cv.width, cv.height);
+          out = cv.toDataURL('image/jpeg', Math.max(0.42, 0.66 - pass * 0.06));
+          if(out.length <= budget) break;
+          side = Math.round(side * 0.82);
+        }
+        resolve(out);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+const photoKB = url => Math.max(1, Math.round(url.length / 1400));
+
 /* Step photos are kept smaller than the cover photo — a recipe can have many. */
 function pickStepPhoto(e, idx){
-  const file=e.target.files&&e.target.files[0]; if(!file||!S.draft) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const img=new Image();
-    img.onload=()=>{
-      const max=640, sc=Math.min(1, max/Math.max(img.width,img.height));
-      const cv=document.createElement('canvas');
-      cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
-      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-      if(!S.draft.steps[idx]) S.draft.steps[idx]=['','',''];
-      S.draft.steps[idx][2]=cv.toDataURL('image/jpeg',.7);
-      render();
-    };
-    img.src=ev.target.result;
-  };
-  reader.readAsDataURL(file);
+  const file = e.target.files && e.target.files[0];
+  if(!file || !S.draft) return;
+  showToast('Shrinking the photo…' + zh(' 處理相片中') + '…', true);
+  shrinkPhoto(file, STEP_SIDE, STEP_BUDGET).then(function(url){
+    hideToast();
+    if(!S.draft) return;
+    if(!S.draft.steps[idx]) S.draft.steps[idx] = ['','',''];
+    S.draft.steps[idx][2] = url;
+    render();
+    flash('Photo added · ' + photoKB(url) + ' KB');
+  }).catch(function(){
+    hideToast();
+    flash("Couldn't use that photo" + zh(" 相片讀取失敗") + "");
+  });
 }
 function pickPhoto(e){
-  const file=e.target.files&&e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const img=new Image();
-    img.onload=()=>{
-      const max=900, sc=Math.min(1, max/Math.max(img.width,img.height));
-      const cv=document.createElement('canvas');
-      cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
-      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-      S.draft.img=cv.toDataURL('image/jpeg',.75);
-      render();
-    };
-    img.src=ev.target.result;
-  };
-  reader.readAsDataURL(file);
+  const file = e.target.files && e.target.files[0];
+  if(!file || !S.draft) return;
+  showToast('Shrinking the photo…' + zh(' 處理相片中') + '…', true);
+  shrinkPhoto(file, COVER_SIDE, COVER_BUDGET).then(function(url){
+    hideToast();
+    if(!S.draft) return;
+    S.draft.img = url;
+    render();
+    flash('Photo added · ' + photoKB(url) + ' KB');
+  }).catch(function(){
+    hideToast();
+    flash("Couldn't use that photo" + zh(" 相片讀取失敗") + "");
+  });
 }
 
 /* ============ wake lock ============ */
@@ -1302,20 +1580,23 @@ const ACT={
   pickDraftCat:k=>{ if(S.draft){ S.draft.cat=k; render(); } },
   pickDraftBook:k=>{ if(S.draft){ S.draft.book=k; render(); } },
   pickBook:k=>{ S.book=k; S.cat='all'; persist(); render(); },
-  goMenu:()=>{ S.view='menu'; S.menuPick=''; render(); },
-  menuOn:id=>{ const ids=menuIds(); if(ids.indexOf(id)<0) ids.push(id); setMenu(ids); render(); },
-  menuOff:id=>{ setMenu(menuIds().filter(x=>x!==id)); render(); },
-  menuClear:()=>{ setMenu([], ''); S.view='home'; render(); flash('Menu cleared 已清除'); },
-  shareMenu:()=>shareMenu(),
-  menuToList:()=>{
-    const items=menuItems();
-    if(!items.length){ flash('Choose a dish first 請先揀菜'); return; }
+  goMenu:()=>{ S.view='menu'; S.menuDate=S.menuDate||dayKey(0); S.menuPick=''; render(); },
+  goMenuOn:k=>{ S.view='menu'; S.menuDate=k; S.menuPick=''; render(); },
+  pickMenuDay:k=>{ S.menuDate=k; S.menuPick=''; render(); },
+  menuOn:id=>{ const k=S.menuDate||dayKey(0); const ids=menuIds(k); if(ids.indexOf(id)<0) ids.push(id); setMenu(k, ids); render(); },
+  menuOff:id=>{ const k=S.menuDate||dayKey(0); setMenu(k, menuIds(k).filter(x=>x!==id)); render(); },
+  menuClear:()=>{ const k=S.menuDate||dayKey(0); setMenu(k, []); render(); flash('Menu cleared' + zh(' 已清除')); },
+  shareMenu:()=>shareMenu(S.menuDate||dayKey(0)),
+  shareMenuOn:k=>shareMenu(k),
+  menuToList:k=>{
+    const items=menuItems(k||S.menuDate||dayKey(0));
+    if(!items.length){ flash('Choose a dish first' + zh(' 請先揀菜')); return; }
     let add=[];
     items.forEach(r=>(r.ing||[]).forEach(i=>{
       if(!i[1] || inList(i[1]) || add.some(a=>a.en===i[1])) return;
       add.push({en:i[1], cn:i[2], done:false});
     }));
-    if(!add.length){ flash('Everything is already on the list 已經喺清單'); return; }
+    if(!add.length){ flash('Everything is already on the list' + zh(' 已經喺清單')); return; }
     S.shopping=S.shopping.concat(add); persist(); S.view='list'; render();
     flash(add.length+' added to shopping list');
   },
@@ -1326,7 +1607,7 @@ const ACT={
   saveWho:()=>{
     const el=document.getElementById('whoInput');
     const name=(el&&el.value.trim())||'';
-    if(!name){ flash('Please type your name 請輸入你嘅名'); return; }
+    if(!name){ flash('Please type your name' + zh(' 請輸入你嘅名')); return; }
     setWho(name); S.askWho=false; render(); flash('Hello '+name+'!');
   },
   changeWho:()=>{ S.askWho=true; render(); },
@@ -1344,7 +1625,13 @@ const ACT={
 };
 
 const app=document.getElementById('app');
+app.addEventListener('touchstart', pullStart, {passive:true});
+app.addEventListener('touchmove', pullMove, {passive:false});
+app.addEventListener('touchend', pullEnd, {passive:true});
+app.addEventListener('touchcancel', ()=>{ pull.on=false; pullPaint(0); }, {passive:true});
+
 app.addEventListener('click',e=>{
+  syncSoon();
   const el=e.target.closest('[data-act]'); if(!el) return;
   const parts=el.dataset.act.split(':');
   const fn=ACT[parts[0]];
@@ -1355,7 +1642,8 @@ app.addEventListener('input',e=>{
   const v=e.target.value;
   if(k==='query'){ S.query=v; renderGridOnly(); return; }
   if(k==='menupick'){ S.menuPick=v; render(); const el=document.querySelector('[data-in="menupick"]'); if(el){ el.focus(); el.setSelectionRange(v.length,v.length); } return; }
-  if(k==='menunote'){ if(S.menu) S.menu.note=v; return; }
+  if(k==='menunote'){ const m=menuFor(); if(m) m.note=v; return; }
+  if(k==='menuoccasion'){ const m=menuFor(); if(m) m.occasion=v; return; }
   const d=S.draft; if(!d) return;
   if(k==='den') d.en=v;
   else if(k==='dcn') d.cn=v;
@@ -1374,7 +1662,9 @@ app.addEventListener('input',e=>{
 app.addEventListener('change',e=>{
   const k=e.target.dataset.in||'';
   if(k==='photo'){ pickPhoto(e); return; }
-  if(k==='menunote'){ setMenu(menuIds(), e.target.value); return; }
+  if(k==='menudate'){ const v=e.target.value; if(v){ S.menuDate=v; S.menuPick=''; render(); } return; }
+  if(k==='menunote'){ const key=S.menuDate||dayKey(0); setMenu(key, menuIds(key), {note:e.target.value}); return; }
+  if(k==='menuoccasion'){ const key=S.menuDate||dayKey(0); setMenu(key, menuIds(key), {occasion:e.target.value}); return; }
   if(k.indexOf('stepphoto:')===0){ pickStepPhoto(e, +k.split(':')[1]); }
 });
 
@@ -1394,7 +1684,9 @@ loadCache().then(had=>{
 });
 /* Coming back to the app after a while: pick up anything the others changed. */
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && S.loaded && !S.syncing && SHARED) loadShared();
+  if(document.visibilityState!=='visible') return;
+  syncIdle = 0;
+  if(S.loaded && !S.syncing && SHARED) loadShared(); else scheduleSync();
 });
 
 /* Installed-app niceties: remember the launch mode and keep the layout stable. */
