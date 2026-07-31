@@ -562,19 +562,37 @@ document.addEventListener('scroll', function(){
   clearTimeout(photoSweepT);
   photoSweepT = setTimeout(sweepPhotos, 120);
 }, true);
-async function tzhClient(t){
+async function trClient(t, from, to){
   if(!t) return '';
   try{
     const ac=new AbortController(); setTimeout(()=>ac.abort(),4000);
-    const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q='+encodeURIComponent(t),{signal:ac.signal});
+    const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl='+from+'&tl='+to+'&dt=t&q='+encodeURIComponent(t),{signal:ac.signal});
     const j=await r.json(); return (j[0]||[]).map(x=>x[0]).join('').trim();
   }catch(e){ return ''; }
 }
+const tzhClient = t => trClient(t, 'en', 'zh-TW');
+const tenClient = t => trClient(t, 'zh-TW', 'en');
+const hasCJK = t => /[\u4e00-\u9fff]/.test(t||'');
+const mostlyCJK = t => {
+  const cjk = (String(t||'').match(/[\u4e00-\u9fff]/g)||[]).length;
+  const lat = (String(t||'').match(/[A-Za-z]/g)||[]).length;
+  return cjk > 0 && cjk >= lat;
+};
+/* Whichever half of a pair is empty is the half that gets written, so the
+   cookbook can be kept in Chinese as readily as in English. */
+async function pairClient(a, b){
+  if(a && !b) return [a, await tzhClient(a)];
+  if(b && !a) return [(await tenClient(b)) || b, b];
+  return [a, b];
+}
 async function clientTranslate(o){
-  if(o.en && !o.cn) o.cn = await tzhClient(o.en);
-  for(const i of o.ing){ if(i[1] && !i[2]) i[2]=await tzhClient(i[1]); }
-  for(const s of o.steps){ if(s[0] && !s[1]) s[1]=await tzhClient(s[0]); }
-  if(o.tip && !/[一-鿿]/.test(o.tip)){ const z=await tzhClient(o.tip); if(z) o.tip=o.tip+' '+z; }
+  const nm = await pairClient(o.en, o.cn); o.en = nm[0]; o.cn = nm[1];
+  for(const i of o.ing){ const p = await pairClient(i[1], i[2]); i[1]=p[0]; i[2]=p[1]; }
+  for(const s of o.steps){ const p = await pairClient(s[0], s[1]); s[0]=p[0]; s[1]=p[1]; }
+  if(o.tip){
+    if(!hasCJK(o.tip)){ const z=await tzhClient(o.tip); if(z) o.tip=o.tip+' '+z; }
+    else if(mostlyCJK(o.tip)){ const e=await tenClient(o.tip); if(e) o.tip=e+' '+o.tip; }
+  }
   return o;
 }
 
@@ -1229,7 +1247,7 @@ function editHtml(){
         ${S.importNote?`<div class="ins" id="importNote" style="margin-top:.55em;font-size:.85em;color:${S.importErr?'#8A5A33':'#6B7A45'};line-height:1.4">${esc(S.importNote)}</div>`:''}
       </div>
       <div class="eyebrow" style="margin:1.4em 0 .6em">The dish</div>
-      <input data-in="den" value="${esc(d.en)}" placeholder="Name in English" class="finput" style="font-size:1.05em;font-family:'Newsreader','Noto Serif TC',serif">
+      <input data-in="den" value="${esc(d.en)}" placeholder="Name in English${zh('（留空會由中文翻譯）')}" class="finput" style="font-size:1.05em;font-family:'Newsreader','Noto Serif TC',serif">
       <input data-in="dcn" value="${esc(d.cn)}" placeholder="${zh('中文名（留空會自動翻譯）')}" class="finput tc" style="font-size:.95em;margin-top:.5em;color:#7A6A52;font-family:'Noto Serif TC',serif">
       <div style="display:flex;flex-wrap:wrap;gap:.45em;margin-top:.7em">${cats}<span data-act="newCourse" style="padding:.5em .95em;border-radius:1.3em;background:#FFFBEE;color:#8A5A33;border:1px dashed #DCCFAF;font-size:.95em;cursor:pointer">+ New</span></div>
       <div class="eyebrow" style="margin:1.1em 0 .5em">Whose shelf${zh(' 邊個嘅')}</div>
@@ -1923,7 +1941,7 @@ function courseModalHtml(){
       <div class="eyebrow">New course</div>
       <div style="font-size:1.3em;line-height:1.2;margin-top:.5em">Add a course</div>
       <div style="font-size:.88em;color:#87806F;margin-top:.6em;line-height:1.45">Like Noodles, Steamed, or Party. Everyone in the family gets it.${zh(' 全家共用。')}</div>
-      <input id="courseEn" value="${esc(c.en)}" placeholder="Name in English" class="finput" style="margin-top:1em;text-align:center">
+      <input id="courseEn" value="${esc(c.en)}" placeholder="Name in English${zh('（留空會由中文翻譯）')}" class="finput" style="margin-top:1em;text-align:center">
       <input id="courseCn" value="${esc(c.cn)}" placeholder="${zh('中文（留空會自動翻譯）')}" class="finput tc" style="margin-top:.5em;text-align:center;color:#7A6A52;font-family:'Noto Serif TC',serif">
       <div data-act="saveCourse" class="ybtn ins" style="margin-top:.8em;border-radius:.85em;padding:.85em;text-align:center;font-weight:700">${S.saving?'Saving…':'Add course' + zh(' 加入')}</div>
       <div data-act="closeCourse" class="ins" style="margin-top:.5em;font-size:.88em;color:#A0947E;cursor:pointer;padding:.5em">Cancel</div>
@@ -1956,7 +1974,7 @@ function saveCourse(){
   let key=name.toLowerCase().replace(/[^a-z0-9]/g,'');
   if(!key) key='course'+(COURSES.length+1);
   if(COURSES.some(c=>c.key===key)){ flash('That course already exists' + zh(' 已經有呢個分類')); S.newCourse=null; render(); return; }
-  const next=COURSES.concat([{key:key, en:en.trim()||cn.trim(), cn:cn.trim()}]);
+  const next=COURSES.concat([{key:key, en:en.trim(), cn:cn.trim()}]);
   if(!SHARED){ setCourses(next); S.newCourse=null; render(); flash('Course added'); return; }
   S.saving=true; render();
   api('courses', next).then(list=>{
@@ -1989,7 +2007,7 @@ function cleanDraft(){
   const d=S.draft;
   const ytid=ytId(d.ytid)||d.ytid.trim();
   return {
-    en:d.en.trim()||d.cn.trim(), cn:d.cn.trim(), cat:d.cat, book:d.book||DEFAULT_BOOK,
+    en:d.en.trim(), cn:d.cn.trim(), cat:d.cat, book:d.book||DEFAULT_BOOK,
     time:d.time.trim(), serves:d.serves.trim(), ytid:ytid,
     addedBy:d.addedBy.trim(), tip:d.tip.trim(),
     img: d.img || (ytid?'https://i.ytimg.com/vi/'+ytid+'/hqdefault.jpg':''),

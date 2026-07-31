@@ -458,16 +458,56 @@ function tzh_(t) {
   try { return LanguageApp.translate(t, 'en', 'zh-TW'); } catch (e) { return ''; }
 }
 
+/** The other direction: a dish written in Chinese gets its English filled in. */
+function ten_(t) {
+  if (!t) return '';
+  try { return LanguageApp.translate(t, 'zh-TW', 'en'); } catch (e) { return ''; }
+}
+
 function hasCJK_(t) { return /[\u4e00-\u9fff]/.test(t || ''); }
+
+/* A line with Chinese in it and no more Latin letters than Chinese characters
+   is a Chinese line — "180C" or a brand name in the middle of one does not
+   make it English. */
+function mostlyCJK_(t) {
+  var cjk = (String(t || '').match(/[\u4e00-\u9fff]/g) || []).length;
+  var lat = (String(t || '').match(/[A-Za-z]/g) || []).length;
+  return cjk > 0 && cjk >= lat;
+}
+
+/* Whichever language a pair is missing is the one that gets filled in. Writing
+   the cookbook in Chinese now works exactly as writing it in English does:
+   leave the other box empty and it is written for you on saving. Nothing
+   already typed is ever replaced. */
+function pair_(a, b) {
+  if (a && !b) return [a, tzh_(a)];
+  if (b && !a) return [ten_(b) || b, b];   /* if it fails, show what was typed */
+  return [a, b];
+}
 
 function autoTranslate_(r) {
   if (!r || typeof r !== 'object') return r;
-  if (r.en && !r.cn) r.cn = tzh_(r.en);
-  (r.ing || []).forEach(function (i) { if (i[1] && !i[2]) i[2] = tzh_(i[1]); });
-  (r.steps || []).forEach(function (s) { if (s[0] && !s[1]) s[1] = tzh_(s[0]); });
-  if (r.tip && !hasCJK_(r.tip)) {
-    var z = tzh_(r.tip);
-    if (z && z !== r.tip) r.tip = r.tip + ' ' + z;
+
+  var name = pair_(r.en, r.cn);
+  r.en = name[0]; r.cn = name[1];
+
+  (r.ing || []).forEach(function (i) {
+    var p = pair_(i[1], i[2]); i[1] = p[0]; i[2] = p[1];
+  });
+  (r.steps || []).forEach(function (s) {
+    var p = pair_(s[0], s[1]); s[0] = p[0]; s[1] = p[1];
+  });
+
+  /* The family note is one piece of text written "English 中文", so the half
+     that is missing is added on the side it belongs. */
+  if (r.tip) {
+    if (!hasCJK_(r.tip)) {
+      var z = tzh_(r.tip);
+      if (z && z !== r.tip) r.tip = r.tip + ' ' + z;
+    } else if (mostlyCJK_(r.tip)) {
+      var e = ten_(r.tip);
+      if (e && e !== r.tip) r.tip = e + ' ' + r.tip;
+    }
   }
   return r;
 }
@@ -604,8 +644,11 @@ function saveCourses(list) {
       var key = String((c && c.key) || '').replace(/[^A-Za-z0-9_]/g, '').toLowerCase();
       if (!key) return;
       for (var i = 0; i < out.length; i++) if (out[i].key === key) return;
-      var en = String((c && c.en) || key).slice(0, 40);
-      var cn = String((c && c.cn) || '').slice(0, 40) || tzh_(en);
+      var en = String((c && c.en) || '').slice(0, 40);
+      var cn = String((c && c.cn) || '').slice(0, 40);
+      if (!en && cn) en = ten_(cn) || cn;
+      if (!en) en = key;
+      if (!cn) cn = tzh_(en);
       out.push({ key: key, en: en, cn: cn });
     });
     if (!out.length) throw new Error('A cookbook needs at least one course.');
@@ -1237,14 +1280,7 @@ function parseRecipeHtml_(raw, vid) {
 /** Fills every blank Chinese field using Google Translate (built into Apps Script, free). */
 function translateDraft_(r) {
   if (!r || r.error) return r;
-  if (r.en && !r.cn) r.cn = tzh_(r.en);
-  (r.ing || []).forEach(function (i) { if (i[1] && !i[2]) i[2] = tzh_(i[1]); });
-  (r.steps || []).forEach(function (s) { if (s[0] && !s[1]) s[1] = tzh_(s[0]); });
-  if (r.tip && !hasCJK_(r.tip)) {
-    var z = tzh_(r.tip);
-    if (z && z !== r.tip) r.tip = r.tip + ' ' + z;
-  }
-  return r;
+  return autoTranslate_(r);
 }
 
 /**
