@@ -646,7 +646,10 @@ function saveNote(n) {
     if (!text) throw new Error('A note needs something written on it.');
 
     var rev = bumpRev_(d);
-    var id = String((n && n.id) || '');
+    /* The app names a note when it is written, so that starring it a moment
+       later cannot arrive as a stranger and be written a second time. Take the
+       name, but only the harmless part of it. */
+    var id = String((n && n.id) || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
     var at = new Date().toISOString();
     var book = cleanBook_(n && n.book);
     var pinned = !!(n && n.pinned);
