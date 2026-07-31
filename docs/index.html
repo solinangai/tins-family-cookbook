@@ -260,7 +260,7 @@ const S = {
   favs:[], shopping:[], size:'m', showCn:true, wake:true, book:DEFAULT_BOOK,
   customs:[], overrides:{}, rev:0,
   menus:{}, menuDate:'', menuBook:'', menuPick:'', pickBook:'', pickCat:'',
-  notes:[], noteDraft:'', noteEditing:null, noteImg:'', zoom:'',
+  notes:[], noteDraft:'', noteEditing:null, noteImg:'', zoom:'', backTo:'',
   favPick:null, favPickQ:'',
   draft:null, editingId:null, newCourse:null,
   importing:false, importNote:'', importErr:false,
@@ -1073,7 +1073,7 @@ function recipeHtml(r){
     <div style="position:relative">
       <div${phMark(r.img)} style="width:100%;height:13.5em;background-color:#F0E6CF;${bgStyle(r.img)};background-size:cover;background-position:center"></div>
       <div style="position:absolute;top:0;left:0;right:0;height:5em;background:linear-gradient(rgba(0,0,0,.45),transparent);pointer-events:none"></div>
-      <div data-act="goHome" class="ins" style="position:absolute;top:.75em;left:.75em;display:flex;align-items:center;gap:.35em;height:2.8em;padding:0 1em 0 .8em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;font-size:.92em;font-weight:600;cursor:pointer">‹ Back</div>
+      <div data-act="recipeBack" class="ins" style="position:absolute;top:.75em;left:.75em;display:flex;align-items:center;gap:.35em;height:2.8em;padding:0 1em 0 .8em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;font-size:.92em;font-weight:600;cursor:pointer">‹ Back</div>
       <div style="position:absolute;top:.75em;right:.75em;display:flex;gap:.5em">
         <span data-act="toggleFav" style="width:2.8em;height:2.8em;border-radius:50%;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:${favC};display:flex;align-items:center;justify-content:center;font-size:1em;cursor:pointer">♥</span>
         <span data-act="editThis" class="ins" style="height:2.8em;padding:0 1em;border-radius:1.4em;background:rgba(20,16,12,.72);border:1px solid rgba(255,255,255,.35);color:#FFFBEE;display:flex;align-items:center;justify-content:center;font-size:.92em;font-weight:600;cursor:pointer">Edit</span>
@@ -1388,7 +1388,7 @@ function menuHtml(){
   }).join('');
 
   const chosenRows = chosen.map((r,i)=>`
-    <div style="display:flex;align-items:center;gap:.7em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.7em .85em">
+    <div data-act="preview:${r.id}" style="display:flex;align-items:center;gap:.7em;background:#FFFBEE;border:1px solid #EADFC2;border-radius:.75em;padding:.7em .85em;cursor:pointer">
       <div style="flex:1;min-width:0">
         <div class="ins" style="font-size:.62em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A5A33;line-height:1.3;margin-bottom:.15em">${esc(courseOf(r.cat).en)}</div>
         <div style="font-size:1em;line-height:1.25">${esc(r.en)}</div>
@@ -2286,7 +2286,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 /* ============ actions ============ */
 const ACT={
   noop:(a,b,e)=>{ e.stopPropagation(); },
-  goHome:()=>{ if(S.view==='home'&&S.cat==='fav') S.cat='all'; S.view='home'; render(); },
+  goHome:()=>{ S.backTo=''; if(S.view==='home'&&S.cat==='fav') S.cat='all'; S.view='home'; render(); },
   /* Nothing to go back from at a desk — the list never left the screen. */
   goFavs:()=>{ S.view='home'; S.cat='fav'; S.query=''; render(); },
   goList:()=>{ S.view='list'; render(); },
@@ -2341,7 +2341,14 @@ const ACT={
   openSheet:()=>{ S.sheet=true; render(); },
   closeSheet:(a,b,e)=>{ e.stopPropagation(); S.sheet=false; render(); },
   pickCat:(k,b,e)=>{ e.stopPropagation(); S.cat=k; S.sheet=false; render(); },
-  open:id=>{ S.view='recipe'; S.recipeId=id; S.step=0; render(); },
+  open:id=>{ S.backTo=''; S.view='recipe'; S.recipeId=id; S.step=0; render(); },
+  /* Opening a dish from the planner is a look, not a departure: Back returns
+     to the day being planned, with the rest of the menu still on screen. */
+  preview:id=>{ S.backTo='menu'; S.view='recipe'; S.recipeId=id; S.step=0; render(); },
+  recipeBack:()=>{
+    if(S.backTo==='menu'){ S.backTo=''; S.view='menu'; render(); return; }
+    ACT.goHome();
+  },
   fav:(id,b,e)=>{ e.stopPropagation(); S.favs=S.favs.includes(id)?S.favs.filter(x=>x!==id):S.favs.concat([id]); persist(); S.view==='home'?renderGridOnly():render(); },
   toggleFav:()=>{ const r=cur(); if(!r) return; ACT.fav(r.id,null,{stopPropagation:()=>{}}); render(); },
   editThis:()=>{ const r=cur(); if(r) openEdit(r); },
