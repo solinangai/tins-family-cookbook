@@ -93,6 +93,8 @@ function doPost(e) {
     else if (action === 'rephoto') out = { ok: true, data: replacePhoto(payload) };
     else if (action === 'menu') out = { ok: true, data: saveMenu(payload) };
     else if (action === 'courses') out = { ok: true, data: saveCourses(payload) };
+    else if (action === 'note') out = { ok: true, data: saveNote(payload) };
+    else if (action === 'unnote') out = { ok: true, data: deleteNote(payload) };
     else if (action === 'save') out = { ok: true, data: saveRecipe(payload) };
     else if (action === 'delete') out = { ok: true, data: deleteRecipe(payload) };
     else if (action === 'reset') out = { ok: true, data: resetRecipe(payload) };
@@ -485,13 +487,16 @@ function getData(since) {
     return {
       rev: 0, full: true,
       overrides: d.overrides, custom: d.custom, tombs: [],
-      courses: d.courses || DEFAULT_COURSES, menu: d.menu || null, menus: futureMenus_(d)
+      courses: d.courses || DEFAULT_COURSES, menu: d.menu || null, menus: futureMenus_(d),
+      notes: d.notes || []
     };
   }
 
   var known = Number((since && since.since) || since || 0);
+  /* Courses, menus and notes are small and always sent whole — a phone that has
+     been away for a week gets the current board either way. */
   var head = { rev: d.rev, courses: d.courses || DEFAULT_COURSES,
-               menu: d.menu || null, menus: futureMenus_(d) };
+               menu: d.menu || null, menus: futureMenus_(d), notes: d.notes || [] };
 
   if (known === d.rev) { head.unchanged = true; return head; }
 
@@ -608,6 +613,89 @@ function saveCourses(list) {
     bumpRev_(d);
     writeData_(d);
     return d.courses;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------- the whiteboard ----------
+
+   The one place for the things that are not a recipe: "Ma is off salt this
+   week", "the oven trips the switch above 200", "helper away Thursday". They
+   belong to the whole family rather than to a shelf or a day, so they are kept
+   in one list, newest first, with whoever wrote it and when.
+
+   A note can be pinned, which is what puts it on the front page. Pinned notes
+   never fall off the end; unpinned ones do, once there are enough of them. */
+var NOTE_KEEP = 80;          // unpinned notes kept, newest first
+var NOTE_MAX = 600;          // characters in one note
+
+function noteId_() {
+  return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function saveNote(n) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var d = readData_();
+    ensureRev_(d);
+    if (!d.notes) d.notes = [];
+
+    var text = String((n && n.text) || '').trim().slice(0, NOTE_MAX);
+    if (!text) throw new Error('A note needs something written on it.');
+
+    var rev = bumpRev_(d);
+    var id = String((n && n.id) || '');
+    var at = new Date().toISOString();
+    var found = null;
+    for (var i = 0; i < d.notes.length; i++) if (d.notes[i].id === id) { found = d.notes[i]; break; }
+
+    if (found) {
+      found.text = text;
+      found.pinned = !!(n && n.pinned);
+      found.editedBy = String((n && n.by) || '');
+      found.editedAt = at;
+      found.rev = rev;
+    } else {
+      found = {
+        id: id || noteId_(),
+        text: text,
+        by: String((n && n.by) || ''),
+        at: at,
+        pinned: !!(n && n.pinned),
+        rev: rev
+      };
+      d.notes.unshift(found);
+    }
+
+    /* Trim the tail, but never a pinned note. */
+    var kept = [], loose = 0;
+    for (var j = 0; j < d.notes.length; j++) {
+      var note = d.notes[j];
+      if (note.pinned) { kept.push(note); continue; }
+      if (loose < NOTE_KEEP) { kept.push(note); loose++; }
+    }
+    d.notes = kept;
+
+    writeData_(d);
+    return { notes: d.notes, saved: found, rev: rev };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function deleteNote(id) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var d = readData_();
+    ensureRev_(d);
+    if (!d.notes) d.notes = [];
+    var rev = bumpRev_(d);
+    d.notes = d.notes.filter(function (n) { return n.id !== String(id || ''); });
+    writeData_(d);
+    return { notes: d.notes, rev: rev };
   } finally {
     lock.releaseLock();
   }

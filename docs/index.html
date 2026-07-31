@@ -229,6 +229,8 @@ function api(action, payload){
       else if(action==='rephoto') r.replacePhoto(payload);
       else if(action==='menu') r.saveMenu(payload);
       else if(action==='courses') r.saveCourses(payload);
+      else if(action==='note') r.saveNote(payload);
+      else if(action==='unnote') r.deleteNote(payload);
       else reject(new Error('unknown action'));
       return;
     }
@@ -257,6 +259,7 @@ const S = {
   favs:[], shopping:[], size:'m', showCn:true, wake:true, book:DEFAULT_BOOK,
   customs:[], overrides:{}, rev:0,
   menus:{}, menuDate:'', menuBook:'', menuPick:'', pickBook:'', pickCat:'',
+  notes:[], noteDraft:'', noteEditing:null,
   draft:null, editingId:null, newCourse:null,
   importing:false, importNote:'', importErr:false,
   saving:false, loaded:!GAS, askWho:false, syncing:false, tidy:null,
@@ -326,7 +329,7 @@ const CACHE_KEY = 'cookbook.v6';
 function cacheShared(){
   IDB.put('kv', CACHE_KEY, {
     rev:S.rev, overrides:S.overrides, custom:S.customs,
-    courses:COURSES, menus:S.menus
+    courses:COURSES, menus:S.menus, notes:S.notes
   });
 }
 function loadCache(){
@@ -337,6 +340,7 @@ function loadCache(){
     S.rev = c.rev || 0;
     if(c.courses) setCourses(c.courses);
     S.menus = c.menus || (c.menu && c.menu.date ? {[c.menu.date]: c.menu} : {});
+    S.notes = c.notes || [];
     return true;
   }).catch(()=>false);
 }
@@ -345,6 +349,7 @@ function loadCache(){
 function applyServer(d){
   if(!d) return false;
   if(d.courses) setCourses(d.courses);
+  if(d.notes) S.notes = d.notes;
   if(d.menus) S.menus = d.menus;
   else if(d.menu && d.menu.date) S.menus = {[d.menu.date]: d.menu};
   if(d.unchanged){ S.rev = d.rev || S.rev; return false; }
@@ -651,6 +656,7 @@ function homeHtml(){
       <div data-act="openSheet" class="ybtn" style="flex:none;display:flex;align-items:center;gap:.5em;border-radius:1.7em;padding:.72em 1.1em;font-size:1em;white-space:nowrap">${esc(catLabel())} <span style="font-size:.6em">▼</span></div>
     </div>
     <div class="pane grid-pane" style="flex:1;overflow-y:auto;padding:0 1.25em 1.25em;-webkit-overflow-scrolling:touch">
+      ${noticeCardHtml()}
       ${todayCardHtml()}
       <div id="gridzone">${gridZoneHtml()}</div>
     </div>
@@ -783,6 +789,104 @@ function todayCardHtml(){
       </div>
       ${m&&m.by?`<div class="byline" style="margin-top:.55em">Chosen by ${esc(m.by)}</div>`:''}
       ${aheadRow}
+    </div>`;
+}
+
+/* ============ the whiteboard ============
+
+   The things that are not a recipe: who is off salt this week, which burner
+   trips the switch, that the helper is away on Thursday. They sit above the
+   dishes on the front page so nobody has to be told twice, and pinning one is
+   what keeps it there. */
+function noteWhen(n){
+  const t = n.editedAt || n.at;
+  if(!t) return '';
+  const d = new Date(t);
+  if(isNaN(d)) return '';
+  const day = d.toISOString().slice(0,10);
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if(mins < 2) return 'just now';
+  if(mins < 60) return mins + ' min ago';
+  if(day === dayKey(0)) return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  if(day === dayKey(-1)) return 'yesterday';
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+}
+function pinnedNotes(){ return S.notes.filter(n=>n.pinned); }
+
+function noteRowHtml(n){
+  const who = n.editedBy || n.by;
+  const meta = [who ? esc(who) : '', noteWhen(n)].filter(Boolean).join(' · ');
+  return `
+  <div style="background:#FFFBEE;border:1px solid ${n.pinned?'#F7C948':'#EADFC2'};border-radius:.85em;padding:.8em .9em">
+    <div style="display:flex;gap:.6em;align-items:flex-start">
+      <div style="flex:1;min-width:0;font-size:1em;line-height:1.5;white-space:pre-wrap;word-break:break-word">${esc(n.text)}</div>
+      <span data-act="pinNote:${n.id}" class="ins" title="Keep this on the front page"
+            style="flex:none;cursor:pointer;font-size:1.05em;line-height:1;color:${n.pinned?'#F7C948':'#DCCFAF'}">${n.pinned?'★':'☆'}</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.6em;margin-top:.5em">
+      <span class="byline" style="margin:0">${meta}</span>
+      <span class="ins" style="display:flex;gap:.7em;flex:none">
+        <span data-act="editNote:${n.id}" style="font-size:.78em;font-weight:600;color:#8A5A33;cursor:pointer">Edit</span>
+        <span data-act="delNote:${n.id}" style="font-size:.78em;font-weight:600;color:#A0947E;cursor:pointer">Remove</span>
+      </span>
+    </div>
+  </div>`;
+}
+
+function boardHtml(){
+  const editing = S.noteEditing ? S.notes.find(n=>n.id===S.noteEditing) : null;
+  const pinned = S.notes.filter(n=>n.pinned);
+  const rest = S.notes.filter(n=>!n.pinned);
+  const section = (label, list) => list.length ? `
+    <div class="rule" style="margin:1.1em 0 .7em"><span class="eyebrow">${label}</span><span class="line"></span></div>
+    <div style="display:flex;flex-direction:column;gap:.6em">${list.map(noteRowHtml).join('')}</div>` : '';
+  return `
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.75em;padding:1em 1.25em .8em;border-bottom:1px solid #EADFC2;flex:none">
+      <span data-act="goHome" class="ins" style="font-size:.92em;font-weight:600;color:#87806F;cursor:pointer;padding:.3em .2em">‹ Back</span>
+      <span style="font-size:1.05em">Family notes${zh(' 家庭留言')}</span>
+      <span style="width:3em"></span>
+    </div>
+    <div class="pane" style="flex:1;overflow-y:auto;padding:1em 1.25em 2.5em">
+      <textarea data-in="notedraft" class="f2" rows="3"
+        placeholder="${editing?'Change this note…':'Write something for the family…'}${zh(editing?' 修改留言':' 寫低俾屋企人')}">${esc(S.noteDraft)}</textarea>
+      <div class="ins" style="display:flex;gap:.5em;margin-top:.55em">
+        <div data-act="saveNote" class="ybtn" style="flex:1;border-radius:.7em;padding:.75em;text-align:center;font-size:.9em;font-weight:700">${editing?'Save note':'Put it on the board'}${zh(editing?' 儲存':' 貼上')}</div>
+        ${editing?`<div data-act="cancelNote" class="ins" style="flex:none;padding:.75em 1em;border:1.5px solid #EADFC2;border-radius:.7em;font-size:.9em;font-weight:700;color:#87806F;cursor:pointer">Cancel</div>`:''}
+      </div>
+      <div class="ins" style="font-size:.78em;color:#87806F;margin-top:.5em;line-height:1.45">Everyone in the family sees this. Tap ☆ to keep a note on the front page.${zh(' 全家都睇到。撳 ☆ 可以釘喺首頁。')}</div>
+      ${section('On the front page', pinned)}
+      ${section(pinned.length?'Everything else':'Notes', rest)}
+      ${S.notes.length?'':`<div style="text-align:center;padding:2.6em 1em;color:#87806F;font-size:1em;line-height:1.5">Nothing on the board yet.${zh(' 白板未有留言。')}</div>`}
+    </div>
+  </div>`;
+}
+
+/* The front page only ever shows the pinned notes, and only a couple of them.
+   With nothing pinned it stays a single quiet line — which is also the only way
+   onto the board from a phone, where the tab bar has no room for a sixth. */
+function noticeCardHtml(){
+  if(S.query.trim()) return '';
+  const pinned = pinnedNotes();
+  if(!pinned.length){
+    const n = S.notes.length;
+    return `<div data-act="goBoard" class="ins" style="display:flex;align-items:center;justify-content:space-between;gap:.6em;border:1px dashed #DCCFAF;border-radius:.85em;padding:.8em 1em;margin-bottom:.9em;cursor:pointer;color:#8A5A33;font-size:.9em;font-weight:600">
+      <span>Family notes${zh(' 家庭留言')}${n?` · ${n}`:''}</span><span>›</span>
+    </div>`;
+  }
+  const rows = pinned.slice(0,3).map(n=>`
+    <div style="display:flex;gap:.5em;align-items:baseline;padding:.16em 0">
+      <span style="flex:none;color:#F7C948">★</span>
+      <span style="flex:1;min-width:0;white-space:pre-wrap;word-break:break-word">${esc(n.text)}</span>
+    </div>`).join('');
+  const more = pinned.length > 3 ? ` +${pinned.length-3} more` : '';
+  return `
+    <div data-act="goBoard" style="background:#FFFBEE;border:1px solid #EADFC2;border-radius:1em;padding:.9em 1em;margin-bottom:.95em;cursor:pointer">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:.5em">
+        <span class="eyebrow">Family notes${zh(' 家庭留言')}</span>
+        <span class="ins" style="font-size:.8em;font-weight:700;color:#8A5A33">Board${esc(more)} ›</span>
+      </div>
+      <div style="margin-top:.5em;font-size:.96em;line-height:1.45">${rows}</div>
     </div>`;
 }
 
@@ -1073,6 +1177,7 @@ const ICON = {
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>`,
   gear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.1 14.4a1.5 1.5 0 0 0 .3 1.7l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.5 1.5 0 0 0-1.7-.3 1.5 1.5 0 0 0-.9 1.4v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.5 1.5 0 0 0-1-1.4 1.5 1.5 0 0 0-1.7.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.5 1.5 0 0 0 .3-1.7 1.5 1.5 0 0 0-1.4-.9h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.5 1.5 0 0 0 1.4-1 1.5 1.5 0 0 0-.3-1.7l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.5 1.5 0 0 0 1.7.3h.1a1.5 1.5 0 0 0 .9-1.4v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.5 1.5 0 0 0 .9 1.4 1.5 1.5 0 0 0 1.7-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.5 1.5 0 0 0-.3 1.7v.1a1.5 1.5 0 0 0 1.4.9h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.5 1.5 0 0 0-1.4.9z"/></svg>`,
   pot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16v5.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 14.5z"/><path d="M2.5 9h19"/><path d="M9 6c0-1.1.9-2 2-2M14 6c0-1.1.9-2 2-2"/></svg>`,
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3.5h5l-.7 5.2 3.2 2.6v1.9H7v-1.9l3.2-2.6z"/><path d="M12 13.2V20"/></svg>`,
   cal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/><path d="M8.5 14.5l1.5 1.5 3-3.2"/></svg>`
 };
 
@@ -1270,6 +1375,27 @@ function setMenu(book, date, ids, extra){
     .catch(()=>flash("Couldn't share the menu — try again" + zh(" 未能同步") + ""));
 }
 
+/* A note goes up on this phone straight away and is sent on behind it, the same
+   way a menu is. The server owns the list, so whatever it sends back wins. */
+function applyNotes(res){
+  if(res && res.notes) S.notes = res.notes;
+  if(res && res.rev) S.rev = Math.max(S.rev, res.rev);
+  cacheShared();
+  render();
+}
+function pushNote(n, done){
+  const at = new Date().toISOString();
+  const i = n.id ? S.notes.findIndex(x=>x.id===n.id) : -1;
+  if(i >= 0) S.notes[i] = Object.assign({}, S.notes[i], {text:n.text, pinned:n.pinned, editedBy:n.by, editedAt:at});
+  else S.notes.unshift({id:'tmp'+Date.now(), text:n.text, by:n.by, at:at, pinned:n.pinned});
+  cacheShared();
+  render();
+  if(!SHARED){ flash(done); return; }
+  api('note', n)
+    .then(res=>{ applyNotes(res); flash(done); })
+    .catch(()=>flash("Couldn't share that note — try again" + zh(' 未能同步')));
+}
+
 /* The message the helper actually receives. */
 function menuText(book, key){
   const m = menuFor(book, key);
@@ -1396,6 +1522,7 @@ function railNav(){
   return row('goHome', ICON.pot,  'Cook',      '',              onHome && S.cat!=='fav')
        + row('goFavs', ICON.heart(S.cat==='fav'), 'Favourite', count(S.favs.length), onHome && S.cat==='fav')
        + row('goMenu', ICON.cal,  'Today',     pill(today),     S.view==='menu')
+       + row('goBoard', ICON.pin, 'Notes',    pill(pinnedNotes().length), S.view==='board')
        + row('goList', ICON.list, 'Shopping',  pill(S.shopping.length), S.view==='list')
        + row('goSettings', ICON.gear, 'Settings', '',           S.view==='settings');
 }
@@ -1443,6 +1570,7 @@ function browseHtml(){
       <div class="ins" style="display:flex;flex-wrap:wrap;gap:.4em;margin-top:.8em">${chips}</div>
     </div>
     <div class="pane grid-pane" style="flex:1;overflow-y:auto;padding:0 1.35em 1.35em">
+      ${noticeCardHtml()}
       ${todayCardHtml()}
       <div id="gridzone">${gridZoneHtml()}</div>
     </div>
@@ -1560,6 +1688,7 @@ function viewHtml(){
   if((S.view==='recipe'||S.view==='cook') && r) return recipeHtml(r);
   if(S.view==='list') return listHtml();
   if(S.view==='menu') return menuHtml();
+  if(S.view==='board') return boardHtml();
   if(S.view==='settings') return settingsHtml();
   if(S.view==='edit' && S.draft) return editHtml();
   S.view='home'; return homeHtml();
@@ -2024,6 +2153,34 @@ const ACT={
   goFavs:()=>{ S.view='home'; S.cat='fav'; S.query=''; render(); },
   goList:()=>{ S.view='list'; render(); },
   goSettings:()=>{ S.view='settings'; render(); },
+  goBoard:()=>{ S.view='board'; S.noteDraft=''; S.noteEditing=null; render(); },
+  cancelNote:()=>{ S.noteDraft=''; S.noteEditing=null; render(); },
+  editNote:id=>{
+    const n=S.notes.find(x=>x.id===id); if(!n) return;
+    S.view='board'; S.noteEditing=id; S.noteDraft=n.text; render();
+  },
+  saveNote:()=>{
+    const text=(S.noteDraft||'').trim();
+    if(!text){ flash('Write something first' + zh(' 請先輸入')); return; }
+    const was=S.noteEditing ? S.notes.find(n=>n.id===S.noteEditing) : null;
+    pushNote({id:S.noteEditing||'', text:text, by:whoAmI(), pinned:was?!!was.pinned:false},
+             S.noteEditing?'Note saved':'Put on the board');
+    S.noteDraft=''; S.noteEditing=null;
+  },
+  pinNote:id=>{
+    const n=S.notes.find(x=>x.id===id); if(!n) return;
+    pushNote({id:n.id, text:n.text, by:whoAmI(), pinned:!n.pinned},
+             n.pinned?'Taken off the front page':'Kept on the front page');
+  },
+  delNote:id=>{
+    const n=S.notes.find(x=>x.id===id); if(!n) return;
+    if(!confirm('Remove this note?' + zh(' 確定移除呢個留言？'))) return;
+    S.notes=S.notes.filter(x=>x.id!==id);
+    if(S.noteEditing===id){ S.noteEditing=null; S.noteDraft=''; }
+    render();
+    if(SHARED) api('unnote', id).then(applyNotes).catch(()=>flash("Couldn't remove — try again" + zh(' 移除失敗')));
+    else flash('Removed');
+  },
   goAdd:()=>openAdd(),
   openSheet:()=>{ S.sheet=true; render(); },
   closeSheet:(a,b,e)=>{ e.stopPropagation(); S.sheet=false; render(); },
@@ -2161,6 +2318,7 @@ app.addEventListener('input',e=>{
   const v=e.target.value;
   if(k==='query'){ S.query=v; renderGridOnly(); return; }
   if(k==='menupick'){ S.menuPick=v; render(); const el=document.querySelector('[data-in="menupick"]'); if(el){ el.focus(); el.setSelectionRange(v.length,v.length); } return; }
+  if(k==='notedraft'){ S.noteDraft=v; return; }
   if(k==='menunote'){ const m=menuFor(S.menuBook||S.book, S.menuDate); if(m) m.note=v; return; }
   if(k==='menuoccasion'){ const m=menuFor(S.menuBook||S.book, S.menuDate); if(m) m.occasion=v; return; }
   const d=S.draft; if(!d) return;
