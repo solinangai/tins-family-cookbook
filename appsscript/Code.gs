@@ -810,6 +810,7 @@ var CAT_RULES = [
 ];
 
 function guessCat_(node, title) {
+  node = node || {};
   var hay = [firstStr_(node.recipeCategory), firstStr_(node.recipeCuisine), title || ''].join(' ');
   for (var i = 0; i < CAT_RULES.length; i++) if (CAT_RULES[i].re.test(hay)) return CAT_RULES[i].cat;
   return 'main';
@@ -851,20 +852,143 @@ function metaOf_(raw, prop) {
 }
 
 /** Main: raw page HTML -> draft recipe (no AI, no API key). */
+/* ---------- YouTube ----------
+
+   A YouTube watch page carries no schema.org recipe, so the JSON-LD reader
+   below can never find anything there — which is why pasting a video link only
+   ever filled in the title. What a cooking video does have is the description,
+   and that is where nearly every channel writes the ingredient list and the
+   steps out in full. So for a video we read the description and parse that.
+
+   Two ways in, because YouTube does not always answer a server the way it
+   answers a phone: the watch page (which carries the full description inside
+   ytInitialPlayerResponse), and oEmbed (a small, reliable, key-free endpoint
+   that always gives at least the title, author and thumbnail). */
+
+/** Title + full description out of the watch page's player payload. */
+function ytPlayer_(raw) {
+  var out = { title: '', desc: '' };
+  if (!raw) return out;
+  var d = raw.match(/"shortDescription":("(?:[^"\\]|\\.)*")/);
+  if (d) { try { out.desc = JSON.parse(d[1]); } catch (e) {} }
+  var t = raw.match(/"title":\s*\{\s*"simpleText":\s*("(?:[^"\\]|\\.)*")/);
+  if (t) { try { out.title = JSON.parse(t[1]); } catch (e) {} }
+  if (!out.title) out.title = metaOf_(raw, 'og:title');
+  if (!out.desc) out.desc = metaOf_(raw, 'og:description') || metaOf_(raw, 'description');
+  return out;
+}
+
+/** Key-free fallback: always answers, even when the watch page is withheld. */
+function ytOembed_(vid) {
+  try {
+    var res = UrlFetchApp.fetch(
+      'https://www.youtube.com/oembed?format=json&url=' +
+      encodeURIComponent('https://www.youtube.com/watch?v=' + vid),
+      { muteHttpExceptions: true, followRedirects: true });
+    if (res.getResponseCode() !== 200) return null;
+    return JSON.parse(res.getContentText());
+  } catch (e) { return null; }
+}
+
+var YT_ING_HEAD  = /^[\s\-*•>#]*(ingredients?|what you(?:'ll)? need|材\s*料|食\s*材|配\s*料)\s*[:：]?\s*$/i;
+var YT_STEP_HEAD = /^[\s\-*•>#]*(instructions?|method|directions?|steps?|how to make|做\s*法|步\s*驟|製\s*法)\s*[:：]?\s*$/i;
+var YT_OTHER_HEAD = /^[\s\-*•>#]*(notes?|tips?|nutrition|equipment|chapters?|timestamps?|music|follow|subscribe|about me|小貼士)\s*[:：]?\s*$/i;
+/* Channel boilerplate — links, socials, sponsors, chapter timestamps. */
+var YT_JUNK = /(https?:\/\/|www\.|@[A-Za-z0-9_]{3,}|#[A-Za-z0-9_]{2,}|subscribe|patreon|instagram|facebook|tiktok|discord|amazon|affiliate|sponsor|^\d{1,2}:\d{2})/i;
+
+/* When a description has no "Ingredients:" header we have to guess, and the
+   thing that marks an ingredient is a quantity: either at the front the way
+   English writes it ("200g flour"), or at the end the way Chinese does
+   ("蝦仁 150克"). A line like "Bake at 180C for 45 min" has neither, so it
+   stays out of the list. */
+var YT_QTY = /^[\d½¼¾⅓⅔⅛⅜⅝⅞]|\d\s*(g|kg|ml|l|oz|lb|tbsp|tsp|cups?|cloves?|克|毫升|湯匙|茶匙|隻|個|片|條|斤|兩|杯)\.?$/i;
+
+function ytClean_(line) {
+  return String(line || '')
+    .replace(/^[\s\-*•·▪◆‣●o]+/, '')          /* bullet glyphs */
+    .replace(/^\d{1,2}\s*[.)、]\s*/, '')       /* "1." / "2)" / "3、" */
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** A video description -> { ing:[[emoji,text,'']], steps:[[text,'','']], note } */
+function parseYtDescription_(desc) {
+  var out = { ing: [], steps: [], note: '' };
+  if (!desc) return out;
+  var lines = String(desc).split(/\r?\n/);
+  var mode = '', sawIngHead = false, loose = [];
+
+  for (var i = 0; i < lines.length; i++) {
+    var raw = lines[i];
+    var line = ytClean_(raw);
+    if (!line) { continue; }
+
+    if (YT_ING_HEAD.test(raw) || YT_ING_HEAD.test(line)) { mode = 'ing'; sawIngHead = true; continue; }
+    if (YT_STEP_HEAD.test(raw) || YT_STEP_HEAD.test(line)) { mode = 'step'; continue; }
+    if (YT_OTHER_HEAD.test(raw) || YT_OTHER_HEAD.test(line)) { mode = ''; continue; }
+    if (YT_JUNK.test(line)) { if (mode) mode = ''; continue; }
+    if (line.length > 320) { continue; }
+
+    if (mode === 'ing') {
+      out.ing.push([emojiFor_(line), line, '']);
+    } else if (mode === 'step') {
+      if (line.length > 3) out.steps.push([line, '', '']);
+    } else if (!sawIngHead && line.length <= 90 && YT_QTY.test(line)) {
+      /* No "Ingredients:" header — collect quantity-looking lines as a guess. */
+      loose.push(line);
+    } else if (!out.note && line.length > 40) {
+      out.note = line;
+    }
+  }
+
+  /* Nothing was labelled, but several lines looked like quantities: use them. */
+  if (!out.ing.length && loose.length >= 3) {
+    for (var j = 0; j < loose.length; j++) out.ing.push([emojiFor_(loose[j]), loose[j], '']);
+  }
+  return out;
+}
+
+/** A video link -> draft recipe, from the description rather than JSON-LD. */
+function parseYouTube_(raw, vid) {
+  var img = 'https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg';
+  var p = ytPlayer_(raw);
+  var title = p.title, desc = p.desc;
+
+  /* The watch page was withheld or unhelpful — ask oEmbed instead. */
+  if (!title || !desc) {
+    var o = ytOembed_(vid);
+    if (o) {
+      if (!title) title = o.title || '';
+      if (o.thumbnail_url) img = o.thumbnail_url;
+    }
+  }
+  if (!title) return { error: 'no-recipe', img: img };
+
+  var parsed = parseYtDescription_(desc);
+  var body = { en: title, cat: guessCat_(null, title), img: img, ytid: vid,
+               ing: parsed.ing, steps: parsed.steps, tip: parsed.note };
+
+  /* Only the title came back: say so, so the app can tell the reader that the
+     rest needs typing in rather than pretending the import worked. */
+  if (!parsed.ing.length && !parsed.steps.length) {
+    body.partial = true;
+    if (!body.tip && desc) body.tip = String(desc).slice(0, 300);
+  }
+  return body;
+}
+
 function parseRecipeHtml_(raw, vid) {
+  /* A video is a different kind of page — read its description, not its markup. */
+  if (vid) return parseYouTube_(raw, vid);
+
   var blocks = ldBlocks_(raw), node = null;
   for (var i = 0; i < blocks.length && !node; i++) {
     try { node = findRecipeNode_(JSON.parse(blocks[i].trim())); } catch (e) {}
   }
 
-  var img = vid ? 'https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg' : (metaOf_(raw, 'og:image') || metaOf_(raw, 'twitter:image'));
+  var img = metaOf_(raw, 'og:image') || metaOf_(raw, 'twitter:image');
 
   if (!node) {
-    var title = metaOf_(raw, 'og:title') || stripTags_((raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '');
-    var desc = metaOf_(raw, 'og:description') || metaOf_(raw, 'description');
-    if (vid && title) {
-      return { partial: true, en: title, cat: 'main', img: img, ytid: vid, ing: [], steps: [], tip: desc ? desc.slice(0, 400) : '' };
-    }
     return { error: 'no-recipe', img: img };
   }
 
@@ -928,9 +1052,11 @@ function extractRecipe(url) {
   try {
     raw = fetchPage_(vid ? 'https://www.youtube.com/watch?v=' + vid : url);
   } catch (e) {
-    return { error: 'unreadable' };
+    raw = '';
   }
-  if (!raw) return { error: 'unreadable' };
+  /* A page we could not open is the end of the road — except for a video, where
+     oEmbed can still tell us the title and the thumbnail without the page. */
+  if (!raw && !vid) return { error: 'unreadable' };
   var out;
   try {
     out = parseRecipeHtml_(raw, vid);

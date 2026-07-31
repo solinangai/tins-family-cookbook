@@ -415,7 +415,7 @@ function loadShared(opts){
    at first, then eases off towards five minutes as the answers keep coming back
    empty, and snaps back to 20 seconds the moment something changes or somebody
    touches the screen. Nothing runs at all while the app is in the background. */
-const SYNC_FAST = 20000, SYNC_SLOW = 300000;
+const SYNC_FAST = 45000, SYNC_SLOW = 600000;
 let syncTimer = null, syncIdle = 0;
 
 function syncWait(){ return Math.min(SYNC_SLOW, SYNC_FAST * Math.pow(2, syncIdle)); }
@@ -704,6 +704,36 @@ function menuItems(book, date){
             .sort((a,b)=>{ const d = rank(a.r)-rank(b.r); return d!==0 ? d : a.i-b.i; })
             .map(x=>x.r);
 }
+/* ============ planning a dish from the dish itself ============
+
+   This used to be one button that said "add to today's meal". It read today's
+   menu but wrote to whichever day the planner had last been left on, so tapping
+   it usually appeared to do nothing at all. The days are on screen now: each
+   one says whether this dish is already on it, and tapping toggles that day.
+   Nothing is hidden, and there is no way for the label and the effect to
+   disagree. */
+const PLAN_DAYS = 7;
+function planRowHtml(r){
+  const b = S.book;
+  const chips = [];
+  for(let i = 0; i < PLAN_DAYS; i++){
+    const k = dayKey(i);
+    const on = onMenu(r.id, b, k);
+    chips.push(`<span data-act="menuDay:${r.id}:${k}" class="daychip ins" style="border-color:${on?'#6B7A45':'#EADFC2'};background:${on?'#6B7A45':'#FFFBEE'};color:${on?'#FFFBEE':'#6E6357'};font-weight:${on?700:600}">${on?'✓ ':''}${esc(dayLabel(k))}</span>`);
+  }
+  const planned = [];
+  for(let i = 0; i < PLAN_DAYS; i++){ const k = dayKey(i); if(onMenu(r.id, b, k)) planned.push(dayLabel(k)); }
+  const note = planned.length
+    ? 'Planned for ' + planned.join(', ')
+    : 'Tap a day to put this dish on that meal.' + zh(' 揀一日，加入嗰日嘅餐單。');
+  return `
+  <div style="margin-top:1em;border:1px solid #EADFC2;background:#FFFBEE;border-radius:.85em;padding:.8em .9em">
+    <div class="eyebrow" style="margin-bottom:.55em">Plan this dish${zh(' 加入餐單')} · ${esc(b)}</div>
+    <div class="ins" style="display:flex;gap:.4em;overflow-x:auto;padding-bottom:.25em;-webkit-overflow-scrolling:touch">${chips.join('')}</div>
+    <div class="ins" style="font-size:.78em;color:${planned.length?'#6B7A45':'#87806F'};margin-top:.55em;line-height:1.4">${esc(note)}</div>
+  </div>`;
+}
+
 /* Days this shelf has something planned for, today first. */
 function plannedDays(book){
   const b = book || S.book;
@@ -851,7 +881,7 @@ function recipeHtml(r){
         <div data-act="startCook" class="ybtn" style="flex:1;border-radius:.85em;padding:.95em;text-align:center;font-size:1em;font-weight:700">Start cooking</div>
         ${r.ytid?`<a href="https://www.youtube.com/watch?v=${esc(r.ytid)}" target="_blank" rel="noopener" style="flex:none;padding:0 1em;background:#FFFBEE;border:1.5px solid #EADFC2;border-radius:.85em;display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;color:#6E6357">▶ Video</a>`:''}
       </div>
-      <div data-act="${onMenu(r.id, S.book, dayKey(0))?'menuOff':'menuOn'}:${r.id}" class="ins" style="margin-top:.55em;border:1.5px solid ${onMenu(r.id, S.book, dayKey(0))?'#6B7A45':'#EADFC2'};background:${onMenu(r.id, S.book, dayKey(0))?'#F2F5E8':'#FFFBEE'};border-radius:.85em;padding:.8em;text-align:center;font-size:.9em;font-weight:700;color:${onMenu(r.id, S.book, dayKey(0))?'#6B7A45':'#8A5A33'};cursor:pointer">${onMenu(r.id, S.book, dayKey(0))?"✓ On today's menu" + zh(" 今日餐單") + "":"+ Cook this today" + zh(" 加入今日餐單") + ""}</div>
+      ${planRowHtml(r)}
       <div class="rule" style="margin:1.4em 0 .7em"><span class="eyebrow">Ingredients</span><span class="line"></span><span data-act="addAll" style="font-size:.75em;font-weight:700;color:#6B7A45;cursor:pointer">+ Add all</span></div>
       <div style="display:flex;flex-direction:column;gap:.55em">${ing}</div>
       <div class="rule" style="margin:1.4em 0 .7em"><span class="eyebrow">Method</span><span class="line"></span></div>
@@ -1433,7 +1463,6 @@ function emptyPaneHtml(){
 function recipePaneHtml(r){
   const favC = S.favs.includes(r.id) ? '#E5734F' : '#FFFBEE';
   const prov = r.addedBy ? 'By '+r.addedBy : 'Family recipe';
-  const on = onMenu(r.id, S.book, dayKey(0));
   return `
   <div id="recipecol">
     <div style="position:relative;flex:none">
@@ -1464,7 +1493,7 @@ function recipePaneHtml(r){
         ${r.lastCooked?`<span class="chip">Cooked ${esc(r.lastCooked)}</span>`:''}
       </div>
       ${bylineFor(r)}
-      <div data-act="${on?'menuOff':'menuOn'}:${r.id}" class="ins" style="margin-top:.9em;display:inline-flex;border:1.5px solid ${on?'#6B7A45':'#EADFC2'};background:${on?'#F2F5E8':'#FFFBEE'};border-radius:.8em;padding:.65em 1.1em;font-size:.85em;font-weight:700;color:${on?'#6B7A45':'#8A5A33'};cursor:pointer">${on?"✓ On today's menu" + zh(" 今日餐單"):"+ Cook this today" + zh(" 加入今日餐單")}</div>
+      ${planRowHtml(r)}
 
       <div id="recipecols">
         <div>
@@ -1536,8 +1565,42 @@ function viewHtml(){
   S.view='home'; return homeHtml();
 }
 
+/* ============ staying where you were ============
+
+   Every redraw rebuilds the page, which would otherwise throw the reader back
+   to the top — in the middle of scanning the dishes, or just after tapping a
+   dish onto tomorrow's menu. So before the rebuild we note how far each
+   scrolling column had been scrolled, and afterwards we put it back.
+
+   Each column is labelled with what it is showing rather than where it sits, so
+   the browse list keeps its place while a different dish opens beside it, and a
+   newly opened dish still starts at the top where it should. */
+function markPanes(){
+  document.querySelectorAll('#app .pane').forEach((el,i)=>{
+    el.dataset.sk = el.closest('#browsecol') ? 'browse'
+                  : el.closest('#recipecol') ? 'recipe:'+(S.recipeId||'')
+                  : S.view+':'+i;
+  });
+}
+function panePlaces(){
+  const at = {};
+  document.querySelectorAll('#app .pane[data-sk]').forEach(el=>{
+    if(el.scrollTop) at[el.dataset.sk] = el.scrollTop;
+  });
+  return at;
+}
+function restorePanes(at){
+  const keys = Object.keys(at);
+  if(!keys.length) return;
+  document.querySelectorAll('#app .pane[data-sk]').forEach(el=>{
+    const y = at[el.dataset.sk];
+    if(y) el.scrollTop = y;
+  });
+}
+
 function render(){
   const app=document.getElementById('app');
+  const at=panePlaces();
   const size=SIZES.find(z=>z.key===S.size)||SIZES[1];
   app.style.fontSize=size.base+'px';
   const r=cur();
@@ -1564,6 +1627,8 @@ function render(){
     + (S.newCourse?courseModalHtml():'')
     + `<div id="ptrbox"></div>`
     + `<div id="toastbox"></div>`;
+  markPanes();
+  restorePanes(at);
   renderToast();
   paintPhotos();
   watchPhotos();
@@ -2009,6 +2074,18 @@ const ACT={
   menuOn:id=>{ const b=S.menuBook||S.book, k=S.menuDate||dayKey(0); const ids=menuIds(b,k); if(ids.indexOf(id)<0) ids.push(id); setMenu(b, k, ids); render(); },
   menuOff:id=>{ const b=S.menuBook||S.book, k=S.menuDate||dayKey(0); setMenu(b, k, menuIds(b,k).filter(x=>x!==id)); render(); },
   menuClear:()=>{ const b=S.menuBook||S.book, k=S.menuDate||dayKey(0); setMenu(b, k, []); render(); flash('Menu cleared' + zh(' 已清除')); },
+  /* From the recipe: put this dish on a named day, or take it off again. The
+     day comes from the chip that was tapped, never from the planner's state. */
+  menuDay:(id, k)=>{
+    if(!id || !k) return;
+    const b = S.book;
+    const ids = menuIds(b, k);
+    const at = ids.indexOf(id);
+    if(at < 0) ids.push(id); else ids.splice(at, 1);
+    setMenu(b, k, ids);
+    render();
+    flash((at < 0 ? 'Added to ' : 'Taken off ') + dayLabel(k) + zh(at < 0 ? ' 已加入' : ' 已移除'));
+  },
   shareMenu:()=>shareMenu(S.menuBook||S.book, S.menuDate||dayKey(0)),
   shareMenuOn:k=>shareMenu(S.book, k),
   menuToList:k=>{
@@ -2052,6 +2129,25 @@ app.addEventListener('touchstart', pullStart, {passive:true});
 app.addEventListener('touchmove', pullMove, {passive:false});
 app.addEventListener('touchend', pullEnd, {passive:true});
 app.addEventListener('touchcancel', ()=>{ pull.on=false; pullPaint(0); }, {passive:true});
+
+/* ============ the wheel, anywhere in a column ============
+
+   On a desk each column scrolls on its own, but only the middle of a column
+   actually scrolls: the search box and course chips above the dish list, and
+   the big photo above a recipe, sit outside the scrolling part. Putting the
+   pointer over any of those and turning the wheel did nothing, which reads as
+   the app having frozen. So a wheel turn anywhere over a column is handed to
+   that column's scrolling part. */
+app.addEventListener('wheel', e=>{
+  if(!WIDE()) return;
+  if(scrollerFor(e.target)) return;          /* already over something that scrolls */
+  const col = e.target.closest && e.target.closest('#browsecol,#recipecol,#mainpane');
+  if(!col) return;
+  const pane = col.querySelector('.pane');
+  if(!pane || pane.scrollHeight <= pane.clientHeight + 4) return;
+  pane.scrollTop += e.deltaY;
+  e.preventDefault();
+}, {passive:false});
 
 app.addEventListener('click',e=>{
   syncSoon();
