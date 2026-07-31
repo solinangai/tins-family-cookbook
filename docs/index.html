@@ -2443,14 +2443,36 @@ app.addEventListener('touchcancel', ()=>{ pull.on=false; pullPaint(0); }, {passi
    pointer over any of those and turning the wheel did nothing, which reads as
    the app having frozen. So a wheel turn anywhere over a column is handed to
    that column's scrolling part. */
+/* Can this box still move the way the wheel is asking it to? A box already at
+   its bottom is no use to a downward turn, and the turn should carry on to
+   whatever is behind it rather than being swallowed. */
+function canScroll(el, dy){
+  if(!el) return false;
+  const room = el.scrollHeight - el.clientHeight;
+  if(room <= 4) return false;
+  if(dy > 0) return el.scrollTop < room - 1;
+  if(dy < 0) return el.scrollTop > 1;
+  return false;
+}
 app.addEventListener('wheel', e=>{
   if(!WIDE()) return;
-  if(scrollerFor(e.target)) return;          /* already over something that scrolls */
+  const dy = e.deltaY;
+  if(!dy) return;
+  /* Walk up from whatever is under the pointer — a card, its photo, a chip —
+     looking for something that can actually take the turn. */
+  let el = e.target;
+  while(el && el.nodeType === 1 && el.id !== 'app'){
+    const oy = getComputedStyle(el).overflowY;
+    if((oy === 'auto' || oy === 'scroll') && canScroll(el, dy)) return;   /* the browser has this */
+    el = el.parentElement;
+  }
+  /* Nothing under the pointer will move: hand the turn to this column's
+     scrolling part, so the wheel works over a photo, a header or a card alike. */
   const col = e.target.closest && e.target.closest('#browsecol,#recipecol,#mainpane');
   if(!col) return;
   const pane = col.querySelector('.pane');
-  if(!pane || pane.scrollHeight <= pane.clientHeight + 4) return;
-  pane.scrollTop += e.deltaY;
+  if(!canScroll(pane, dy)) return;
+  pane.scrollTop += dy;
   e.preventDefault();
 }, {passive:false});
 
