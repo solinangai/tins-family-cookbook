@@ -648,12 +648,21 @@ function saveNote(n) {
     var rev = bumpRev_(d);
     var id = String((n && n.id) || '');
     var at = new Date().toISOString();
+    var book = cleanBook_(n && n.book);
+    var pinned = !!(n && n.pinned);
+    /* A photographed label or prescription is stored the way a dish photo is:
+       once, under its fingerprint, with the note keeping only a reference. */
+    var img = String((n && n.img) || '');
+    if (img.indexOf('data:image') === 0) img = putPhoto_(img);
+
     var found = null;
     for (var i = 0; i < d.notes.length; i++) if (d.notes[i].id === id) { found = d.notes[i]; break; }
 
     if (found) {
       found.text = text;
-      found.pinned = !!(n && n.pinned);
+      found.pinned = pinned;
+      found.img = img;
+      found.book = book;
       found.editedBy = String((n && n.by) || '');
       found.editedAt = at;
       found.rev = rev;
@@ -663,10 +672,19 @@ function saveNote(n) {
         text: text,
         by: String((n && n.by) || ''),
         at: at,
-        pinned: !!(n && n.pinned),
+        pinned: pinned,
+        img: img,
+        book: book,
         rev: rev
       };
       d.notes.unshift(found);
+    }
+
+    /* One note at a time sits on a shelf's Cook page. */
+    if (pinned) {
+      d.notes.forEach(function (x) {
+        if (x !== found && cleanBook_(x.book) === book) x.pinned = false;
+      });
     }
 
     /* Trim the tail, but never a pinned note. */
@@ -781,15 +799,46 @@ function ytId_(u) {
   return m ? m[1] : '';
 }
 
-/** Fetches a page server-side (no CORS limits here). */
+/* A recipe site behind Cloudflare will not answer something that announces
+   itself as a script, which is why "fill in from this link" so often came back
+   with nothing. Ask the way a browser asks. If that still fails, ask again
+   plainly — a few sites prefer it — and only then give up. */
+var UA_BROWSER = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+                 '(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+
 function fetchPage_(url) {
-  var res = UrlFetchApp.fetch(url, {
-    muteHttpExceptions: true,
-    followRedirects: true,
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TinsCookbook/1.0)' }
-  });
-  if (res.getResponseCode() >= 400) return '';
-  return res.getContentText();
+  var tries = [
+    { 'User-Agent': UA_BROWSER,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-GB,en;q=0.9,zh-TW;q=0.8' },
+    {}
+  ];
+  for (var i = 0; i < tries.length; i++) {
+    try {
+      var res = UrlFetchApp.fetch(url, {
+        muteHttpExceptions: true, followRedirects: true, headers: tries[i]
+      });
+      if (res.getResponseCode() < 400) {
+        var body = res.getContentText();
+        if (body) return body;
+      }
+    } catch (e) { /* try the next way in */ }
+  }
+  return '';
+}
+
+/* Last resort for a page that will not hand over its HTML: a free reader
+   service returns it as plain text, which the description parser can still
+   turn into ingredients and steps. No key, no account. */
+function fetchAsText_(url) {
+  try {
+    var res = UrlFetchApp.fetch('https://r.jina.ai/' + url, {
+      muteHttpExceptions: true, followRedirects: true,
+      headers: { 'User-Agent': UA_BROWSER, 'Accept': 'text/plain' }
+    });
+    if (res.getResponseCode() >= 400) return '';
+    return res.getContentText();
+  } catch (e) { return ''; }
 }
 
 
@@ -1036,6 +1085,30 @@ function parseYtDescription_(desc) {
   return out;
 }
 
+/* The reader service answers with a short header ("Title:", "URL Source:",
+   "Markdown Content:") and then the page as plain text. The ingredients and the
+   steps are laid out on a recipe page much as they are in a video description,
+   so the same reading works on both. */
+function parseTextRecipe_(txt) {
+  var out = { title: '', img: '', ing: [], steps: [], note: '' };
+  if (!txt) return out;
+
+  var t = txt.match(/^Title:\s*(.+)$/m);
+  if (t) out.title = decodeEntities_(t[1]).slice(0, 120);
+  var im = txt.match(/^Image URL:\s*(\S+)$/m) || txt.match(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/);
+  if (im) out.img = im[1];
+
+  var body = txt.replace(/^[\s\S]*?Markdown Content:\s*/, '');
+  /* Markdown link syntax turns an ingredient into noise — keep the words. */
+  body = body.replace(/\[([^\]]*)\]\((?:[^)]*)\)/g, '$1');
+
+  var got = parseYtDescription_(body);
+  out.ing = got.ing;
+  out.steps = got.steps;
+  out.note = got.note;
+  return out;
+}
+
 /** A video link -> draft recipe, from the description rather than JSON-LD. */
 function parseYouTube_(raw, vid) {
   var img = 'https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg';
@@ -1144,13 +1217,32 @@ function extractRecipe(url) {
   }
   /* A page we could not open is the end of the road — except for a video, where
      oEmbed can still tell us the title and the thumbnail without the page. */
-  if (!raw && !vid) return { error: 'unreadable' };
   var out;
   try {
-    out = parseRecipeHtml_(raw, vid);
+    out = raw ? parseRecipeHtml_(raw, vid) : { error: 'unreadable' };
   } catch (e) {
-    return { error: 'parse' };
+    out = { error: 'parse' };
   }
+
+  /* The page was refused, or it publishes no recipe data. Read it as plain
+     text and pick the recipe out of that instead — the same reading that gets
+     ingredients out of a video description. */
+  if (!vid && out.error) {
+    var txt = fetchAsText_(url);
+    if (txt) {
+      var got = parseTextRecipe_(txt);
+      if (got.ing.length || got.steps.length) {
+        out = {
+          en: got.title || (raw ? metaOf_(raw, 'og:title') : '') || '',
+          cat: guessCat_(null, got.title || ''),
+          img: (raw ? (metaOf_(raw, 'og:image') || metaOf_(raw, 'twitter:image')) : '') || got.img || '',
+          ing: got.ing, steps: got.steps, tip: got.note, ytid: ''
+        };
+        if (!got.ing.length || !got.steps.length) out.partial = true;
+      }
+    }
+  }
+
   if (out.error) return out;
   return translateDraft_(out);
 }
