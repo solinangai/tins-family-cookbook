@@ -1018,6 +1018,41 @@ function ytPlayer_(raw) {
   return out;
 }
 
+/* The watch page is the unreliable part. Apps Script asks from a Google data
+   centre, and YouTube frequently answers those with a consent page carrying no
+   description at all — which is the whole reason a video import came back with
+   only a title. The Data API answers the same question properly, costs one
+   unit of a 10,000-a-day free allowance, and needs a key that costs nothing:
+
+     console.cloud.google.com -> a project -> enable "YouTube Data API v3"
+     -> Credentials -> Create credentials -> API key
+     Apps Script -> Project Settings -> Script Properties -> YOUTUBE_API_KEY
+
+   Without the key everything still works exactly as before; this is only the
+   better road when it is available. */
+function ytApiKey_() {
+  try { return PropertiesService.getScriptProperties().getProperty('YOUTUBE_API_KEY') || ''; }
+  catch (e) { return ''; }
+}
+
+function ytFromApi_(vid) {
+  var key = ytApiKey_();
+  if (!key) return null;
+  try {
+    var res = UrlFetchApp.fetch(
+      'https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' +
+      encodeURIComponent(vid) + '&key=' + encodeURIComponent(key),
+      { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return null;
+    var j = JSON.parse(res.getContentText());
+    var sn = j && j.items && j.items[0] && j.items[0].snippet;
+    if (!sn) return null;
+    var thumbs = sn.thumbnails || {};
+    var best = thumbs.maxres || thumbs.standard || thumbs.high || thumbs.medium || {};
+    return { title: sn.title || '', desc: sn.description || '', img: best.url || '' };
+  } catch (e) { return null; }
+}
+
 /** Key-free fallback: always answers, even when the watch page is withheld. */
 function ytOembed_(vid) {
   try {
@@ -1118,6 +1153,15 @@ function parseYouTube_(raw, vid) {
   var p = ytPlayer_(raw);
   var title = p.title, desc = p.desc;
 
+  /* The Data API, when a key is set: the only source that reliably carries the
+     whole description, which is where the ingredients are written. */
+  var api = ytFromApi_(vid);
+  if (api) {
+    if (api.title) title = api.title;
+    if (api.desc) desc = api.desc;
+    if (api.img) img = api.img;
+  }
+
   /* The watch page was withheld or unhelpful — ask oEmbed instead. */
   if (!title || !desc) {
     var o = ytOembed_(vid);
@@ -1208,6 +1252,75 @@ function translateDraft_(r) {
  * Uses the recipe data that sites publish for Google (schema.org JSON-LD) — so it needs
  * NO AI service and NO API key, and works from anywhere.
  */
+/**
+ * Why did that link not work?
+ *
+ * Run this from the Apps Script editor with a link that failed — pick
+ * diagnoseImport, put the URL in the line below, press Run, and read the
+ * execution log. It reports what each way in actually returned, so the answer
+ * is "the site refused us" or "the site answered but publishes no recipe"
+ * rather than a guess. Nothing is saved and nothing is changed.
+ */
+function diagnoseImport(url) {
+  url = url || 'https://www.bbcgoodfood.com/recipes/classic-lasagne';   // <- put a failing link here
+  url = String(url).trim();
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+  var out = ['Link: ' + url];
+  var vid = ytId_(url);
+  out.push(vid ? 'Looks like a video (' + vid + ')' : 'Looks like a web page');
+
+  if (vid) {
+    out.push('YouTube Data API key set: ' + (ytApiKey_() ? 'yes' : 'no — see ytFromApi_ for how to add one'));
+    var api = ytFromApi_(vid);
+    out.push('  Data API: ' + (api ? 'title "' + api.title + '", description ' + api.desc.length + ' chars'
+                                   : 'no answer'));
+    var oe = ytOembed_(vid);
+    out.push('  oEmbed: ' + (oe ? 'title "' + oe.title + '"' : 'no answer'));
+  }
+
+  var raw = '';
+  try { raw = fetchPage_(vid ? 'https://www.youtube.com/watch?v=' + vid : url); } catch (e) {}
+  out.push('Direct fetch: ' + (raw ? raw.length + ' characters' : 'REFUSED (nothing came back)'));
+
+  if (raw) {
+    if (vid) {
+      var p = ytPlayer_(raw);
+      out.push('  description on the page: ' + (p.desc ? p.desc.length + ' characters' : 'none — probably a consent page'));
+    } else {
+      var blocks = ldBlocks_(raw), node = null;
+      for (var i = 0; i < blocks.length && !node; i++) {
+        try { node = findRecipeNode_(JSON.parse(blocks[i].trim())); } catch (e) {}
+      }
+      out.push('  structured data blocks: ' + blocks.length);
+      out.push('  recipe among them: ' + (node ? 'YES — this link should work' : 'no'));
+      out.push('  og:title: ' + (metaOf_(raw, 'og:title') || '(none)'));
+      out.push('  og:image: ' + (metaOf_(raw, 'og:image') ? 'present' : '(none)'));
+    }
+  }
+
+  if (!vid) {
+    var txt = fetchAsText_(url);
+    out.push('Reader fallback: ' + (txt ? txt.length + ' characters' : 'no answer'));
+    if (txt) {
+      var got = parseTextRecipe_(txt);
+      out.push('  title: ' + (got.title || '(none)'));
+      out.push('  ingredients found: ' + got.ing.length);
+      out.push('  steps found: ' + got.steps.length);
+    }
+  }
+
+  var verdict = extractRecipe(url);
+  out.push('What the app would show: ' + (verdict.error
+    ? 'FAILED (' + verdict.error + ')'
+    : (verdict.partial ? 'partly filled' : 'filled') +
+      ' — ' + (verdict.ing || []).length + ' ingredients, ' + (verdict.steps || []).length + ' steps'));
+
+  var report = out.join('\n');
+  Logger.log(report);
+  return report;
+}
+
 function extractRecipe(url) {
   url = String(url || '').trim();
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
