@@ -845,6 +845,16 @@ function ytId_(u) {
   return m ? m[1] : '';
 }
 
+/* A Chinese recipe site puts Chinese in the address, and a link copied from a
+   phone carries those characters as they are. Neither UrlFetchApp nor the
+   reader service will take that — the address has to be spelled out in ASCII
+   first. Anything already spelled out is left alone, so nothing is encoded
+   twice. */
+function safeUrl_(u) {
+  u = String(u || '');
+  return /[^\x00-\x7F]/.test(u) ? encodeURI(u) : u;
+}
+
 /* A recipe site behind Cloudflare will not answer something that announces
    itself as a script, which is why "fill in from this link" so often came back
    with nothing. Ask the way a browser asks. If that still fails, ask again
@@ -853,6 +863,7 @@ var UA_BROWSER = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/53
                  '(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
 function fetchPage_(url) {
+  url = safeUrl_(url);
   var tries = [
     { 'User-Agent': UA_BROWSER,
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -878,7 +889,7 @@ function fetchPage_(url) {
    turn into ingredients and steps. No key, no account. */
 function fetchAsText_(url) {
   try {
-    var res = UrlFetchApp.fetch('https://r.jina.ai/' + url, {
+    var res = UrlFetchApp.fetch('https://r.jina.ai/' + safeUrl_(url), {
       muteHttpExceptions: true, followRedirects: true,
       headers: { 'User-Agent': UA_BROWSER, 'Accept': 'text/plain' }
     });
@@ -1108,8 +1119,9 @@ function ytOembed_(vid) {
   } catch (e) { return null; }
 }
 
-var YT_ING_HEAD  = /^[\s\-*•>#]*(ingredients?|what you(?:'ll)? need|材\s*料|食\s*材|配\s*料)\s*[:：]?\s*$/i;
-var YT_STEP_HEAD = /^[\s\-*•>#]*(instructions?|method|directions?|steps?|how to make|做\s*法|步\s*驟|製\s*法)\s*[:：]?\s*$/i;
+var HEAD_TAIL = '\\s*(?:[（(][^）)]{0,24}[）)])?\\s*[:：]?\\s*$';
+var YT_ING_HEAD  = new RegExp("^[\\s\\-*•>#]*(ingredients?|what you(?:'ll)? need|材\\s*料|食\\s*材|配\\s*料)" + HEAD_TAIL, 'i');
+var YT_STEP_HEAD = new RegExp("^[\\s\\-*•>#]*(instructions?|method|directions?|steps?|how to make|做\\s*法|步\\s*驟|製\\s*法|煮\\s*法)" + HEAD_TAIL, 'i');
 var YT_OTHER_HEAD = /^[\s\-*•>#]*(notes?|tips?|nutrition|equipment|chapters?|timestamps?|music|follow|subscribe|about me|小貼士)\s*[:：]?\s*$/i;
 /* Channel boilerplate — links, socials, sponsors, chapter timestamps. */
 var YT_JUNK = /(https?:\/\/|www\.|@[A-Za-z0-9_]{3,}|#[A-Za-z0-9_]{2,}|subscribe|patreon|instagram|facebook|tiktok|discord|amazon|affiliate|sponsor|^\d{1,2}:\d{2})/i;
@@ -1303,6 +1315,7 @@ function diagnoseImport(url) {
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
   var out = ['Link: ' + url];
+  if (safeUrl_(url) !== url) out.push('Address spelled out: ' + safeUrl_(url));
   var vid = ytId_(url);
   out.push(vid ? 'Looks like a video (' + vid + ')' : 'Looks like a web page');
 
