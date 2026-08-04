@@ -458,10 +458,42 @@ function tzh_(t) {
   try { return LanguageApp.translate(t, 'en', 'zh-TW'); } catch (e) { return ''; }
 }
 
-/** The other direction: a dish written in Chinese gets its English filled in. */
+/* The other direction: a dish written in Chinese gets its English filled in.
+   "zh-TW" names Traditional Chinese perfectly well as a destination, but as a
+   starting point it is a locale rather than a language and is not reliably
+   accepted — which left this returning nothing, and the English name falling
+   back to the Chinese one. Letting it work out the language itself is both
+   more reliable and handles Simplified without being told. */
 function ten_(t) {
   if (!t) return '';
-  try { return LanguageApp.translate(t, 'zh-TW', 'en'); } catch (e) { return ''; }
+  try {
+    var out = LanguageApp.translate(t, '', 'en');
+    if (out) return out;
+  } catch (e) {}
+  try { return LanguageApp.translate(t, 'zh', 'en'); } catch (e) { return ''; }
+}
+
+/**
+ * Is translation working, and in which directions?
+ *
+ * Run this from the Apps Script editor — pick checkTranslation, press Run,
+ * read the log. Nothing is saved and nothing is changed.
+ */
+function checkTranslation() {
+  var out = [];
+  var pairs = [
+    ['English to Chinese', 'Steamed egg with minced pork', function (t) { return tzh_(t); }],
+    ['Chinese to English', '滑蛋蝦仁', function (t) { return ten_(t); }],
+    ['Chinese to English (longer)', '蝦仁 150克，雞蛋 4隻', function (t) { return ten_(t); }]
+  ];
+  for (var i = 0; i < pairs.length; i++) {
+    var got = '';
+    try { got = pairs[i][2](pairs[i][1]); } catch (e) { got = 'THREW: ' + e; }
+    out.push(pairs[i][0] + ':\n  "' + pairs[i][1] + '"\n  -> ' + (got ? '"' + got + '"' : 'NOTHING CAME BACK'));
+  }
+  var report = out.join('\n');
+  Logger.log(report);
+  return report;
 }
 
 function hasCJK_(t) { return /[\u4e00-\u9fff]/.test(t || ''); }
